@@ -1,0 +1,2597 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Loop Market — the live NFT marketplace on Loop Network. Every item is read directly from the LoopMarketNFT and LoopMarketplace contracts." />
+    <link rel="icon" href="data:," />
+    <title>Loop Market — NFT Marketplace on Loop Network</title>
+    <script>
+      // Apply the saved theme before first paint (dark is the default).
+      try {
+        var savedTheme = localStorage.getItem("loop-market-theme");
+        if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme;
+      } catch (e) { /* private mode: keep the dark default */ }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --accent: #2081e2;
+        --accent-strong: #1868b7;
+        --green: #2fbf71;
+        --red: #e5484d;
+        --amber: #e8930c;
+        --radius: 16px;
+        --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      [data-theme="dark"] {
+        --bg: #0b0d12;
+        --bg-soft: #10121a;
+        --surface: #151824;
+        --surface-2: #1c2030;
+        --surface-3: #242839;
+        --border: #262b3d;
+        --border-soft: #1d2130;
+        --text: #f2f4f8;
+        --dim: #9aa3b5;
+        --dim-2: #6b7390;
+        --header-bg: rgba(11, 13, 18, 0.88);
+        --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+        --img-bg: #1a1e2c;
+      }
+      [data-theme="light"] {
+        --bg: #f6f7f9;
+        --bg-soft: #eef0f4;
+        --surface: #ffffff;
+        --surface-2: #f2f3f7;
+        --surface-3: #e7eaf0;
+        --border: #dde1ea;
+        --border-soft: #e7eaf0;
+        --text: #131722;
+        --dim: #5c6577;
+        --dim-2: #8a93a5;
+        --header-bg: rgba(255, 255, 255, 0.9);
+        --shadow: 0 12px 28px rgba(19, 23, 34, 0.12);
+        --img-bg: #eceef3;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 15px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        padding-bottom: 0;
+      }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      button { font-family: inherit; cursor: pointer; }
+      input, select, textarea { font-family: inherit; }
+      .mono { font-family: var(--mono); font-size: 0.92em; }
+      .tnum { font-variant-numeric: tabular-nums; }
+      .dim { color: var(--dim); }
+      .small { font-size: 13px; }
+      .wrap { max-width: 1220px; margin: 0 auto; padding: 0 20px; }
+
+      /* ---------- header ---------- */
+      header.topbar {
+        position: sticky; top: 0; z-index: 60;
+        background: var(--header-bg);
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--border-soft);
+      }
+      .topbar-in { display: flex; align-items: center; gap: 10px; height: 64px; }
+      .brand { display: flex; align-items: center; gap: 11px; min-width: 0; color: var(--text); }
+      .brand:hover { text-decoration: none; }
+      .brand-mark {
+        width: 40px; height: 40px; border-radius: 12px; flex: none;
+        background: var(--accent); display: grid; place-items: center;
+      }
+      .brand-name { font-weight: 800; font-size: 18px; letter-spacing: -0.01em; line-height: 1.1; white-space: nowrap; }
+      .brand-sub { font-size: 12px; color: var(--dim); line-height: 1.1; white-space: nowrap; }
+      .topbar-spacer { flex: 1; }
+      .icon-btn {
+        width: 36px; height: 36px; min-width: 36px; border-radius: 50%;
+        border: 1px solid var(--border); background: var(--surface);
+        color: var(--text); display: inline-grid; place-items: center; padding: 0;
+        transition: border-color .15s, background .15s;
+      }
+      .icon-btn:hover { border-color: var(--dim-2); background: var(--surface-2); }
+      .icon-btn svg { width: 18px; height: 18px; }
+      .wallet-btn {
+        height: 36px; border-radius: 999px; border: 1px solid var(--border);
+        background: var(--surface); color: var(--text);
+        display: inline-flex; align-items: center; gap: 8px; padding: 0 13px 0 11px;
+        font-weight: 700; font-size: 13px;
+      }
+      .wallet-btn:hover { border-color: var(--dim-2); }
+      .wallet-btn svg { width: 17px; height: 17px; }
+      .wallet-btn.icon-only { width: 36px; padding: 0; justify-content: center; border-radius: 50%; }
+      .dot-live { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent); }
+
+      /* top nav tabs */
+      .tabrow { border-bottom: 1px solid var(--border-soft); background: var(--header-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); position: sticky; top: 64px; z-index: 55; }
+      .tabrow-in { display: flex; gap: 6px; padding: 10px 0; overflow-x: auto; scrollbar-width: none; }
+      .tabrow-in::-webkit-scrollbar { display: none; }
+      .tab {
+        border: 1px solid transparent; background: transparent; color: var(--dim);
+        font-weight: 700; font-size: 15px; padding: 9px 20px; border-radius: 999px; min-height: 40px;
+        white-space: nowrap;
+      }
+      .tab:hover { color: var(--text); }
+      .tab.active { background: var(--text); color: var(--bg); }
+
+      /* ---------- search panel ---------- */
+      .search-panel {
+        position: fixed; inset: 0; z-index: 80; display: none;
+      }
+      .search-panel.open { display: block; }
+      .search-backdrop { position: absolute; inset: 0; background: rgba(4, 6, 10, 0.55); }
+      .search-box {
+        position: relative; max-width: 640px; margin: 76px auto 0; width: calc(100% - 32px);
+        background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+        box-shadow: var(--shadow); overflow: hidden;
+      }
+      .search-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border-soft); }
+      .search-head svg { width: 19px; height: 19px; color: var(--dim); flex: none; }
+      .search-head input {
+        flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text);
+        font-size: 16px; font-weight: 600; min-height: 36px;
+      }
+      .search-head input::placeholder { color: var(--dim-2); }
+      .search-results { max-height: min(58vh, 480px); overflow-y: auto; padding: 8px; }
+      .search-label { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim-2); padding: 10px 10px 6px; }
+      .search-item {
+        display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+        background: transparent; border: 0; border-radius: 12px; padding: 8px 10px; color: var(--text); min-height: 52px;
+      }
+      .search-item:hover { background: var(--surface-2); }
+      .search-item img, .search-item .thumb-ph { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; flex: none; background: var(--img-bg); }
+      .search-item .si-name { font-weight: 700; font-size: 14px; }
+      .search-item .si-sub { font-size: 12px; color: var(--dim); }
+      .search-empty { padding: 22px 14px; color: var(--dim); font-size: 14px; text-align: center; }
+
+      /* ---------- drawer ---------- */
+      .drawer-root { position: fixed; inset: 0; z-index: 90; display: none; }
+      .drawer-root.open { display: block; }
+      .drawer-backdrop { position: absolute; inset: 0; background: rgba(4, 6, 10, 0.55); }
+      .drawer {
+        position: absolute; top: 0; left: 0; bottom: 0; width: min(320px, 88vw);
+        background: var(--surface); border-right: 1px solid var(--border);
+        display: flex; flex-direction: column; overflow-y: auto;
+        animation: drawer-in .22s ease;
+      }
+      @keyframes drawer-in { from { transform: translateX(-24px); opacity: .4; } to { transform: none; opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) { .drawer { animation: none; } html { scroll-behavior: auto; } }
+      .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 16px; }
+      .drawer-profile { margin: 2px 16px 14px; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 14px; }
+      .drawer-nav { padding: 4px 10px 16px; display: flex; flex-direction: column; gap: 2px; }
+      .drawer-link {
+        display: flex; align-items: center; gap: 13px; padding: 9px 8px; border-radius: 12px;
+        color: var(--text); font-weight: 700; font-size: 15px; background: transparent; border: 0; text-align: left; width: 100%; min-height: 48px;
+      }
+      .drawer-link:hover { background: var(--surface-2); text-decoration: none; }
+      .drawer-link .dic {
+        width: 38px; height: 38px; border-radius: 50%; flex: none;
+        background: var(--surface-3); display: grid; place-items: center; color: var(--text);
+      }
+      .drawer-link .dic svg { width: 18px; height: 18px; }
+      .drawer-sep { height: 1px; background: var(--border-soft); margin: 10px 8px; }
+
+      /* ---------- layout / generic ---------- */
+      main { min-height: 62vh; }
+      .page { padding: 26px 0 56px; }
+      h1.hero-title { font-size: clamp(30px, 5.4vw, 46px); line-height: 1.08; letter-spacing: -0.02em; font-weight: 800; margin: 6px 0 12px; max-width: 720px; }
+      .hero-sub { color: var(--dim); font-size: 16px; line-height: 1.6; max-width: 640px; margin: 0 0 8px; }
+      h2.section-title { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin: 34px 0 4px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+      h2.section-title .hint { font-size: 13px; font-weight: 600; color: var(--dim); letter-spacing: 0; }
+      h1.page-title { font-size: clamp(26px, 4.4vw, 36px); font-weight: 800; letter-spacing: -0.02em; margin: 4px 0 8px; }
+      .page-sub { color: var(--dim); max-width: 680px; margin: 0 0 10px; }
+      .card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); }
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        min-height: 44px; padding: 0 22px; border-radius: 999px; border: 1px solid transparent;
+        font-weight: 800; font-size: 15px; background: var(--surface-2); color: var(--text);
+        transition: background .15s, border-color .15s, opacity .15s;
+      }
+      .btn:hover { text-decoration: none; }
+      .btn-primary { background: var(--accent); color: #fff; }
+      .btn-primary:hover { background: var(--accent-strong); }
+      .btn-ghost { background: transparent; border-color: var(--border); }
+      .btn-ghost:hover { border-color: var(--dim-2); }
+      .btn-danger { background: transparent; border-color: var(--red); color: var(--red); }
+      .btn[disabled] { opacity: .45; cursor: not-allowed; }
+      .btn-sm { min-height: 38px; padding: 0 16px; font-size: 14px; }
+      .btn-block { width: 100%; }
+      .verified { display: inline-grid; place-items: center; color: var(--accent); vertical-align: -3px; margin-left: 5px; }
+      .verified svg { width: 17px; height: 17px; }
+      .addr { font-family: var(--mono); font-size: .92em; }
+      .addr-btn { background: none; border: 0; color: var(--accent); font-family: var(--mono); font-size: .92em; padding: 4px 2px; min-height: 32px; font-weight: 600; }
+      .addr-btn:hover { text-decoration: underline; }
+      .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 18px; }
+      .chip {
+        border: 1px solid var(--border); background: var(--surface); color: var(--dim);
+        border-radius: 999px; padding: 0 16px; min-height: 38px; font-weight: 700; font-size: 14px;
+        display: inline-flex; align-items: center; gap: 7px;
+      }
+      .chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+      .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 999px; padding: 3px; gap: 2px; }
+      .seg button { border: 0; background: transparent; color: var(--dim); font-weight: 800; font-size: 13px; border-radius: 999px; padding: 0 16px; min-height: 34px; }
+      .seg button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 5px rgba(0,0,0,.25); }
+      [data-theme="light"] .seg button.active { box-shadow: 0 1px 5px rgba(19,23,34,.14); }
+      .empty-note { padding: 34px 20px; text-align: center; color: var(--dim); background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); font-size: 14px; }
+      .skeleton { border-radius: var(--radius); background: linear-gradient(100deg, var(--surface) 40%, var(--surface-2) 50%, var(--surface) 60%); background-size: 200% 100%; animation: sk 1.3s infinite; min-height: 180px; }
+      @keyframes sk { from { background-position: 120% 0; } to { background-position: -80% 0; } }
+      @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+      .status-line { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 13px; margin: 10px 0 0; }
+      .status-line .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+      .status-line.off .pulse { background: var(--red); }
+
+      /* ---------- hero carousel ---------- */
+      .carousel { position: relative; margin-top: 18px; }
+      .car-viewport { overflow: hidden; border-radius: 22px; }
+      .car-track { display: flex; transition: transform .55s cubic-bezier(.22,.8,.24,1); will-change: transform; }
+      @media (prefers-reduced-motion: reduce) { .car-track { transition: none; } }
+      .car-slide { flex: 0 0 100%; min-width: 0; }
+      .hero-card { position: relative; border-radius: 22px; overflow: hidden; background: var(--surface); border: 1px solid var(--border-soft); cursor: pointer; text-align: left; width: 100%; padding: 0; display: block; color: var(--text); }
+      .hero-media { position: relative; aspect-ratio: 16 / 8.2; background: var(--img-bg); overflow: hidden; }
+      .hero-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .hero-media .hero-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,8,14,0) 42%, rgba(5,8,14,.72) 100%); }
+      .hero-chip { position: absolute; top: 16px; left: 16px; background: rgba(8,10,16,.72); color: #fff; font-weight: 700; font-size: 13px; padding: 7px 13px; border-radius: 999px; backdrop-filter: blur(6px); }
+      .hero-body { position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 22px; color: #fff; }
+      .hero-coll { font-size: clamp(22px, 4vw, 34px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; text-shadow: 0 2px 14px rgba(0,0,0,.45); }
+      .hero-by { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.85); margin-top: 5px; text-shadow: 0 1px 8px rgba(0,0,0,.5); }
+      .hero-stats { display: flex; gap: 34px; margin-top: 14px; flex-wrap: wrap; }
+      .hero-stats .hs-label { font-size: 11px; font-weight: 800; letter-spacing: .09em; color: rgba(255,255,255,.72); }
+      .hero-stats .hs-value { font-size: 19px; font-weight: 800; margin-top: 2px; }
+      .car-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+      .car-arrows { display: flex; gap: 8px; }
+      .car-arrow { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--text); display: grid; place-items: center; }
+      .car-arrow:hover { border-color: var(--dim-2); }
+      .car-arrow svg { width: 17px; height: 17px; }
+      .car-dots { display: flex; gap: 5px; align-items: center; }
+      .car-dot { width: 6px; height: 6px; border-radius: 999px; border: 0; padding: 0; background: var(--dim-2); opacity: .55; min-height: 6px; transition: width .25s, background .25s, opacity .25s; }
+      .car-dot.active { width: 17px; background: var(--accent); opacity: 1; }
+      .car-dot-wrap { padding: 10px 2px; background: none; border: 0; display: grid; place-items: center; min-height: 36px; }
+      @media (max-width: 640px) { .hero-media { aspect-ratio: 4 / 3.4; } .hero-stats { gap: 22px; } }
+
+      /* ---------- rank cards (buyers/sellers) ---------- */
+      .rank-scroll { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(228px, 252px); gap: 14px; overflow-x: auto; padding: 6px 2px 14px; scroll-snap-type: x mandatory; scrollbar-width: thin; }
+      .rank-card { scroll-snap-align: start; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); overflow: hidden; text-align: left; padding: 0; color: var(--text); width: 100%; }
+      .rank-card:hover { border-color: var(--border); }
+      .rank-media { aspect-ratio: 16 / 9; background: var(--img-bg); position: relative; overflow: hidden; }
+      .rank-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .rank-badge { position: absolute; top: 10px; left: 10px; background: rgba(8,10,16,.75); color: #fff; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; }
+      .rank-body { padding: 13px 15px 15px; }
+      .rank-who { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 14px; min-width: 0; }
+      .rank-meta { display: flex; justify-content: space-between; margin-top: 9px; font-size: 13px; }
+      .rank-meta .rm-label { color: var(--dim-2); font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+      .rank-meta .rm-value { font-weight: 800; }
+
+      /* ---------- NFT grid ---------- */
+      .nft-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
+      @media (max-width: 560px) { .nft-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+      .nft-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); overflow: hidden; text-align: left; padding: 0; color: var(--text); width: 100%; display: block; }
+      .nft-card:hover { border-color: var(--border); }
+      .nft-media { aspect-ratio: 1 / 1; background: var(--img-bg); position: relative; overflow: hidden; }
+      .nft-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .nft-body { padding: 12px 14px 14px; }
+      .nft-name { font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .nft-sub { font-size: 12px; color: var(--dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .nft-price { margin-top: 9px; display: flex; justify-content: space-between; align-items: baseline; }
+      .nft-price .p-label { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--dim-2); }
+      .nft-price .p-value { font-weight: 800; font-size: 14px; }
+      .thumb-ph { display: grid; place-items: center; width: 100%; height: 100%; color: var(--dim-2); background: radial-gradient(120% 120% at 20% 10%, var(--surface-3), var(--img-bg)); }
+      .thumb-ph svg { width: 44px; height: 44px; opacity: .7; }
+      .thumb-ph .ph-id { position: absolute; bottom: 10px; right: 12px; font-weight: 800; font-size: 13px; color: var(--dim); }
+      .avatar { border-radius: 50%; flex: none; display: inline-block; vertical-align: middle; background: var(--surface-3); }
+      .rarity-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--surface-2); border: 1px solid var(--border-soft); color: var(--dim); font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
+
+      /* ---------- tables ---------- */
+      .tbl-wrap { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); overflow: hidden; }
+      .tbl-scroll { overflow-x: auto; }
+      table.tbl { width: 100%; border-collapse: collapse; min-width: 780px; }
+      table.tbl th { text-align: left; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim-2); padding: 13px 16px; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
+      table.tbl td { padding: 13px 16px; border-bottom: 1px solid var(--border-soft); vertical-align: middle; font-size: 14px; }
+      table.tbl tr:last-child td { border-bottom: 0; }
+      table.tbl tbody tr.clickable { cursor: pointer; }
+      table.tbl tbody tr.clickable:hover td { background: var(--surface-2); }
+      .tbl-item { display: flex; align-items: center; gap: 12px; min-width: 0; }
+      .tbl-item img, .tbl-item .mini-ph { width: 44px; height: 44px; border-radius: 11px; object-fit: cover; flex: none; background: var(--img-bg); }
+      .mini-ph { display: grid; place-items: center; color: var(--dim-2); font-weight: 800; font-size: 11px; }
+      .ev-kind { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; font-size: 13px; white-space: nowrap; }
+      .ev-kind .ev-ic { width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border-soft); display: grid; place-items: center; color: var(--dim); }
+      .ev-kind .ev-ic svg { width: 13px; height: 13px; }
+      .detail-row td { background: var(--surface-2); font-size: 13px; color: var(--dim); }
+      .detail-grid { display: flex; gap: 26px; flex-wrap: wrap; }
+      .detail-grid b { color: var(--text); }
+      .pct-up { color: var(--green); font-weight: 700; }
+      .pct-down { color: var(--red); font-weight: 700; }
+      /* activity mobile cards */
+      .act-cards { display: none; }
+      @media (max-width: 820px) {
+        .act-table-wrap { display: none; }
+        .act-cards { display: flex; flex-direction: column; gap: 10px; }
+      }
+      .act-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 13px 14px; }
+      .act-card-top { display: flex; gap: 12px; align-items: center; }
+      .act-card-top img, .act-card-top .mini-ph { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex: none; background: var(--img-bg); }
+      .act-lines { margin-top: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px 14px; font-size: 13px; }
+      .act-lines .al-label { color: var(--dim-2); font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; display: block; }
+      .act-detail { margin-top: 11px; border-top: 1px solid var(--border-soft); padding-top: 10px; font-size: 13px; color: var(--dim); display: none; }
+      .act-card.open .act-detail { display: block; }
+      .text-btn { background: none; border: 0; color: var(--accent); font-weight: 800; font-size: 13px; padding: 8px 4px; min-height: 36px; }
+
+      /* ---------- stats ---------- */
+      .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 16px; }
+      .stat-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; }
+      .stat-card .sc-label { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim-2); }
+      .stat-card .sc-value { font-size: 24px; font-weight: 800; letter-spacing: -0.01em; margin-top: 5px; }
+      .stat-card .sc-sub { font-size: 12px; color: var(--dim); margin-top: 2px; }
+      .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; align-items: start; }
+      @media (max-width: 860px) { .two-col { grid-template-columns: 1fr; } }
+      .list-rows { display: flex; flex-direction: column; }
+      .list-row { display: flex; align-items: center; gap: 12px; padding: 11px 4px; border-bottom: 1px solid var(--border-soft); min-width: 0; }
+      .list-row:last-child { border-bottom: 0; }
+      .list-row .lr-main { flex: 1; min-width: 0; }
+      .list-row .lr-title { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .list-row .lr-sub { font-size: 12px; color: var(--dim); }
+      .list-row .lr-value { font-weight: 800; text-align: right; white-space: nowrap; }
+      .list-row .lr-value .lr-sub { display: block; font-weight: 600; }
+      .panel { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 18px; }
+      .panel h3 { margin: 0 0 6px; font-size: 16px; font-weight: 800; }
+      .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+      .panel-head h3 { margin: 0; }
+
+      /* ---------- token detail ---------- */
+      .token-layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 26px; align-items: start; }
+      @media (max-width: 860px) { .token-layout { grid-template-columns: 1fr; } }
+      .token-media { border-radius: 20px; overflow: hidden; background: var(--img-bg); border: 1px solid var(--border-soft); position: relative; aspect-ratio: 1/1; }
+      .token-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .price-box { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 18px; margin-top: 16px; }
+      .price-big { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+      .trait-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
+      .trait { background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 10px 12px; }
+      .trait .t-label { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); }
+      .trait .t-value { font-weight: 700; font-size: 14px; margin-top: 2px; word-break: break-word; }
+      .trait .t-freq { font-size: 11px; color: var(--dim); }
+      .field { margin-bottom: 14px; }
+      .field label { display: block; font-size: 12px; font-weight: 800; letter-spacing: .04em; margin-bottom: 6px; }
+      .field .f-hint { font-size: 12px; color: var(--dim); margin-top: 5px; }
+      .input, textarea.input, select.input {
+        width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text);
+        border-radius: 12px; padding: 11px 13px; font-size: 15px; min-height: 46px; outline: 0;
+      }
+      .input:focus { border-color: var(--accent); }
+      textarea.input { min-height: 92px; resize: vertical; }
+      .inline-form { display: flex; gap: 10px; flex-wrap: wrap; }
+      .inline-form .input { flex: 1; min-width: 140px; }
+      .radio-card { display: flex; gap: 11px; align-items: flex-start; border: 1px solid var(--border); border-radius: 14px; padding: 13px 14px; margin-bottom: 10px; cursor: pointer; background: var(--surface); }
+      .radio-card input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
+      .radio-card.sel { border-color: var(--accent); }
+      .kv { display: flex; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--border-soft); font-size: 14px; }
+      .kv:last-child { border-bottom: 0; }
+      .kv .k { color: var(--dim); }
+      .kv .v { font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+      .copy-btn { border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 9px; min-height: 32px; padding: 0 11px; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; }
+      .copy-btn:hover { border-color: var(--dim-2); }
+
+      /* ---------- profile ---------- */
+      .profile-banner { height: 168px; border-radius: 0 0 22px 22px; position: relative; overflow: hidden; }
+      .profile-head { display: flex; gap: 18px; align-items: flex-end; margin-top: -44px; padding: 0 6px; position: relative; flex-wrap: wrap; }
+      .profile-avatar { width: 96px; height: 96px; border-radius: 50%; border: 4px solid var(--bg); background: var(--surface-3); flex: none; overflow: hidden; }
+      .profile-avatar svg, .profile-avatar img { width: 100%; height: 100%; display: block; }
+      .note-card { border: 1px solid color-mix(in srgb, var(--amber) 45%, var(--border)); background: color-mix(in srgb, var(--amber) 8%, var(--surface)); border-radius: var(--radius); padding: 14px 16px; font-size: 14px; margin-top: 18px; }
+      .note-card b { display: block; margin-bottom: 3px; }
+
+      /* ---------- collection profile ---------- */
+      .coll-banner { height: 190px; border-radius: 22px; overflow: hidden; position: relative; background: var(--img-bg); }
+      .coll-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .coll-banner .shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgba(5,8,14,.55)); }
+      .coll-head { display: flex; gap: 16px; align-items: flex-end; margin-top: -38px; padding: 0 14px; position: relative; flex-wrap: wrap; }
+      .coll-avatar { width: 84px; height: 84px; border-radius: 20px; border: 4px solid var(--bg); overflow: hidden; background: var(--surface-3); flex: none; }
+      .coll-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .coll-stats { display: flex; gap: 30px; flex-wrap: wrap; margin-top: 20px; }
+      .coll-stats .cs-label { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim-2); }
+      .coll-stats .cs-value { font-size: 20px; font-weight: 800; margin-top: 2px; }
+
+      /* ---------- footer / bottom nav ---------- */
+      footer.site { border-top: 1px solid var(--border-soft); margin-top: 20px; }
+      .foot-in { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 22px 0 30px; }
+      .foot-links { display: flex; gap: 6px; flex-wrap: wrap; }
+      .foot-links a, .foot-links button { color: var(--dim); font-size: 13px; font-weight: 700; background: none; border: 0; padding: 8px 9px; min-height: 36px; display: inline-flex; align-items: center; }
+      .foot-links a:hover, .foot-links button:hover { color: var(--text); text-decoration: none; }
+      .bottom-nav {
+        display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 65;
+        background: var(--header-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        border-top: 1px solid var(--border-soft); padding-bottom: env(safe-area-inset-bottom);
+      }
+      .bottom-nav-in { display: grid; grid-template-columns: repeat(4, 1fr); }
+      .bn-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: 58px; min-height: 52px; color: var(--dim); font-size: 11px; font-weight: 700; background: none; border: 0; }
+      .bn-item svg { width: 21px; height: 21px; }
+      .bn-item.active { color: var(--accent); }
+      @media (max-width: 860px) {
+        .bottom-nav { display: block; }
+        body { padding-bottom: 62px; }
+        .tabrow { display: none; }
+      }
+
+      /* ---------- toasts / modal ---------- */
+      .toasts { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 9px; width: min(440px, calc(100vw - 28px)); }
+      @media (max-width: 860px) { .toasts { bottom: 76px; } }
+      .toast { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 13px 15px; font-size: 14px; display: flex; gap: 11px; align-items: flex-start; animation: toast-in .25s ease; }
+      @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+      .toast .t-ic { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; margin-top: 1px; }
+      .toast.ok .t-ic { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); }
+      .toast.err .t-ic { background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--red); }
+      .toast.info .t-ic { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+      .toast b { display: block; font-size: 14px; }
+      .toast .t-sub { color: var(--dim); font-size: 13px; word-break: break-word; }
+      .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: sp 0.8s linear infinite; display: inline-block; }
+      @keyframes sp { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2s; } }
+      .divider { height: 1px; background: var(--border-soft); margin: 18px 0; }
+      .calc-out { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 14px; }
+      .calc-cell { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
+      .calc-cell .cc-label { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--dim-2); }
+      .calc-cell .cc-value { font-size: 19px; font-weight: 800; margin-top: 3px; }
+      input[type="range"] { width: 100%; accent-color: var(--accent); min-height: 32px; }
+      .doc-section { margin-top: 26px; }
+      .doc-section > h2 { font-size: 20px; font-weight: 800; margin: 0 0 6px; }
+      .doc-section > p { color: var(--dim); max-width: 720px; }
+      ul.checks { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 9px; }
+      ul.checks li { display: flex; gap: 10px; font-size: 14px; align-items: flex-start; }
+      ul.checks li svg { width: 17px; height: 17px; flex: none; margin-top: 2px; color: var(--green); }
+      .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 120px; margin-top: 14px; }
+      .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+      .bar { width: 100%; max-width: 44px; background: var(--accent); border-radius: 6px 6px 3px 3px; min-height: 3px; }
+      .bar-lab { font-size: 11px; color: var(--dim-2); font-weight: 700; white-space: nowrap; }
+      .bar-val { font-size: 11px; font-weight: 800; white-space: nowrap; }
+      /* token thumbnails inside rows, table items and activity cards */
+      .list-row img:not(.avatar) { width: 44px; height: 44px; border-radius: 11px; object-fit: cover; flex: none; background: var(--img-bg); }
+      .list-row .thumb-ph, .tbl-item > .thumb-ph { width: 44px; height: 44px; border-radius: 11px; flex: none; }
+      .act-card-top > .thumb-ph { width: 52px; height: 52px; border-radius: 12px; flex: none; }
+      .tbl-item > .thumb-ph svg, .list-row .thumb-ph svg, .act-card-top > .thumb-ph svg { width: 20px; height: 20px; }
+      .tbl-item > .thumb-ph .ph-id, .list-row .thumb-ph .ph-id, .act-card-top > .thumb-ph .ph-id { display: none; }
+      .profile-avatar .thumb-ph, .token-media .thumb-ph { position: absolute; inset: 0; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="brand" href="#/explore" aria-label="Loop Market home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7.5 8.2c-2 .9-3.3 2.2-3.3 3.8 0 2.3 2.7 4 6 4 1.5 0 2.9-.4 4-1M16.5 15.8c2-.9 3.3-2.2 3.3-3.8 0-2.3-2.7-4-6-4-1.5 0-2.9.4-4 1" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/><circle cx="7.6" cy="12" r="1.6" fill="#fff"/><circle cx="16.4" cy="12" r="1.6" fill="#fff"/></svg>
+          </span>
+          <span>
+            <span class="brand-name">Loop Market</span>
+            <span class="brand-sub" style="display:block">NFT · Loop Network</span>
+          </span>
+        </a>
+        <div class="topbar-spacer"></div>
+        <button class="icon-btn" id="btn-search" aria-label="Search NFTs" title="Search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-theme" aria-label="Toggle light or dark theme" title="Theme">
+          <svg id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+          <svg id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <span id="wallet-slot"></span>
+        <button class="icon-btn" id="btn-drawer" aria-label="Open menu" title="Menu">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>
+        </button>
+      </div>
+    </header>
+    <nav class="tabrow" aria-label="Primary">
+      <div class="wrap tabrow-in" id="top-tabs"></div>
+    </nav>
+
+    <div class="search-panel" id="search-panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-backdrop" id="search-backdrop"></div>
+      <div class="search-box">
+        <div class="search-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>
+          <input id="search-input" type="search" placeholder="Search by name, token #, trait, or owner address" autocomplete="off" />
+          <button class="icon-btn" id="search-close" aria-label="Close search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="search-results" id="search-results"></div>
+      </div>
+    </div>
+
+    <div class="drawer-root" id="drawer-root">
+      <div class="drawer-backdrop" id="drawer-backdrop"></div>
+      <aside class="drawer" aria-label="Menu">
+        <div class="drawer-head">
+          <span class="brand">
+            <span class="brand-mark" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7.5 8.2c-2 .9-3.3 2.2-3.3 3.8 0 2.3 2.7 4 6 4 1.5 0 2.9-.4 4-1M16.5 15.8c2-.9 3.3-2.2 3.3-3.8 0-2.3-2.7-4-6-4-1.5 0-2.9.4-4 1" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/><circle cx="7.6" cy="12" r="1.6" fill="#fff"/><circle cx="16.4" cy="12" r="1.6" fill="#fff"/></svg>
+            </span>
+            <span class="brand-name">Loop Market</span>
+          </span>
+          <button class="icon-btn" id="drawer-close" aria-label="Close menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="drawer-profile" id="drawer-profile"></div>
+        <nav class="drawer-nav" id="drawer-nav"></nav>
+      </aside>
+    </div>
+
+    <main id="app" class="wrap"></main>
+
+    <footer class="site">
+      <div class="wrap foot-in">
+        <div class="small dim">Loop Market · Loop Network Mainnet · Chain ID 15551</div>
+        <div class="foot-links">
+          <a href="#/statistics">Statistics</a>
+          <a href="#/documents">Documents</a>
+          <a href="#/documents">Pricing &amp; Fees</a>
+          <a href="#/documents">Safety</a>
+          <a href="https://explorer.mainnetloop.com" target="_blank" rel="noopener">Explorer ↗</a>
+        </div>
+      </div>
+    </footer>
+
+    <nav class="bottom-nav" aria-label="Mobile">
+      <div class="bottom-nav-in" id="bottom-nav"></div>
+    </nav>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
+    <script>
+    "use strict";
+    /* =====================================================================
+       Loop Market — static edition.
+       Everything on this page is read live from the Loop Network contracts
+       by the visitor's own browser: no server, no database, no snapshot.
+       Tokens, owners, listings, offers, royalties and the full trade
+       history come from the public JSON-RPC and IPFS gateways; trades are
+       signed by the visitor's own wallet (window.ethereum).
+       ===================================================================== */
+
+    var RPC_URL = "https://api.mainnetloop.com";
+    var EXPLORER_URL = "https://explorer.mainnetloop.com";
+    var NFT_CONTRACT = "0xDAc25F04254accCf461b36eddC0850088da8e15e";
+    var MARKETPLACE_CONTRACT = "0x27eE86e32a7FFe255C1a8524DCC9352b208975eC";
+    var CHAIN_ID = 15551;
+    var CHAIN_HEX = "0x3cbf";
+    var DEPLOY_FROM_BLOCK = 45270000;
+    var ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+    var IPFS_GATEWAYS = [
+      "https://gateway.pinata.cloud/ipfs/",
+      "https://ipfs.filebase.io/ipfs/",
+      "https://ipfs.io/ipfs/",
+      "https://dweb.link/ipfs/"
+    ];
+
+    // Function selectors of the deployed contracts (verified on-chain).
+    var SEL = {
+      name: "0x06fdde03", symbol: "0x95d89b41", owner: "0x8da5cb5b",
+      ownerOf: "0x6352211e", tokenURI: "0xc87b56dd", royaltyInfo: "0x2a55205a",
+      balanceOf: "0x70a08231", getApproved: "0x081812fc", isApprovedForAll: "0xe985e9c5",
+      nftGetter: "0x47ccca02", feeRecipient: "0x46904840", feeBps: "0xbf333f2c",
+      listings: "0xde74e57b", offers: "0x8a72ea6a",
+      mint: "0xd0def521", approve: "0x095ea7b3", setApprovalForAll: "0xa22cb465",
+      list: "0x50fd7367", cancelListing: "0x305a67a8", buy: "0xd96a094a",
+      makeOffer: "0x9a2f6474", withdrawOffer: "0x8610f045", acceptOffer: "0xc815729d"
+    };
+    // Event topic hashes of the deployed contracts.
+    var TOPIC = {
+      minted: "0x35128ad33619343608da1f9a5ae4267158baafcff8a04f6b7e1f6b3a2ed1f459",
+      transfer: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      listed: "0x50955776c5778c3b7d968d86d8c51fb6b29a7a74c20866b533268e209fc08343",
+      listingCancelled: "0x8e25282255ab31897df2b0456bb993ac7f84d376861aefd84901d2d63a7428a2",
+      sale: "0x61905234b7ced1e034ebd0b31b8f9b762a18f06bfdba53df383d5be7f77d9ba8",
+      offerMade: "0xbdf1e76c2ba2a5c85b93bf78678a4a3b06d63b18422612dac8d7d5249ed46714",
+      offerWithdrawn: "0x60c7613a8b8ce872a461e88b0f376098063e67e4df6d0aa6a55790fe81acdb58",
+      offerAccepted: "0xc67f49229cab3f614ad390c12432e0e671552dcfd15e24ddc005cf5a01a02135"
+    };
+
+    /* ---------------- JSON-RPC plumbing ---------------- */
+    function rpcFetch(body, timeoutMs) {
+      var ctrl = new AbortController();
+      var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs || 25000);
+      return fetch(RPC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: ctrl.signal
+      }).then(function (res) {
+        clearTimeout(timer);
+        if (!res.ok) throw new Error("RPC HTTP " + res.status);
+        return res.json();
+      }).catch(function (e) { clearTimeout(timer); throw e; });
+    }
+    function rpcSingle(method, params) {
+      return rpcFetch({ jsonrpc: "2.0", method: method, params: params, id: 1 })
+        .then(function (d) { return d && d.result !== undefined ? d.result : null; })
+        .catch(function () { return null; });
+    }
+    function rpcBatch(specs) {
+      if (!specs.length) return Promise.resolve([]);
+      var body = specs.map(function (s, i) { return { jsonrpc: "2.0", method: s.method, params: s.params, id: i }; });
+      return rpcFetch(body, 30000).then(function (data) {
+        if (!Array.isArray(data)) return specs.map(function () { return null; });
+        var out = specs.map(function () { return null; });
+        data.forEach(function (entry) {
+          if (entry && typeof entry.id === "number" && entry.id >= 0 && entry.id < out.length) {
+            out[entry.id] = entry.error ? null : (entry.result !== undefined ? entry.result : null);
+          }
+        });
+        return out;
+      }).catch(function () { return specs.map(function () { return null; }); });
+    }
+    function ethCall(to, data) { return { method: "eth_call", params: [{ to: to, data: data }, "latest"] }; }
+
+    /* ---------------- ABI helpers ---------------- */
+    function padUint(n) { return BigInt(n).toString(16).padStart(64, "0"); }
+    function uintWord(n) { return BigInt(n).toString(16).padStart(64, "0"); }
+    function addrWord(a) { return a.toLowerCase().replace(/^0x/, "").padStart(64, "0"); }
+    function hexWords(hex) {
+      if (!hex || typeof hex !== "string") return [];
+      var body = hex.indexOf("0x") === 0 ? hex.slice(2) : hex;
+      var words = [];
+      for (var i = 0; i + 64 <= body.length; i += 64) words.push(body.slice(i, i + 64));
+      return words;
+    }
+    function wordToAddress(word) { return word ? "0x" + word.slice(-40).toLowerCase() : ZERO_ADDRESS; }
+    function wordToBigInt(word) {
+      if (!word) return 0n;
+      try { return BigInt("0x" + word); } catch (e) { return 0n; }
+    }
+    function weiToLoop(wei) { return Math.round((Number(wei) / 1e18) * 1e8) / 1e8; }
+    function decodeStringResult(hex) {
+      if (!hex || hex === "0x") return null;
+      var words = hexWords(hex);
+      if (words.length < 2) return null;
+      var len = Number(wordToBigInt(words[1]));
+      var dataHex = hex.slice(2).slice(128, 128 + len * 2);
+      try {
+        var parts = dataHex.match(/.{2}/g) || [];
+        var bytes = new Uint8Array(parts.map(function (b) { return parseInt(b, 16); }));
+        return new TextDecoder().decode(bytes);
+      } catch (e) { return null; }
+    }
+    function topicToAddress(topic) { return topic ? "0x" + topic.slice(-40).toLowerCase() : ZERO_ADDRESS; }
+    function topicToUint(topic) {
+      if (!topic) return 0;
+      try { return Number(BigInt(topic)); } catch (e) { return 0; }
+    }
+    function parseLoopToWei(input) {
+      var m = /^(\d+)(?:\.(\d+))?$/.exec(String(input).trim());
+      if (!m) return null;
+      var whole = BigInt(m[1] || "0");
+      var frac = (m[2] || "").padEnd(18, "0").slice(0, 18);
+      var wei = whole * (10n ** 18n) + BigInt(frac === "" ? "0" : frac);
+      return wei > 0n ? wei : null;
+    }
+    function loopNumberToWei(n) { return parseLoopToWei(String(n)) || 0n; }
+    function encodeMint(to, uri) {
+      var bytes = new TextEncoder().encode(uri);
+      var dataHex = "";
+      bytes.forEach(function (b) { dataHex += b.toString(16).padStart(2, "0"); });
+      var paddedLen = Math.max(64, Math.ceil(dataHex.length / 64) * 64);
+      return SEL.mint + addrWord(to) + uintWord(64) + uintWord(bytes.length) + dataHex.padEnd(paddedLen, "0");
+    }
+    function toDataUri(json) {
+      var bytes = new TextEncoder().encode(JSON.stringify(json));
+      var bin = "";
+      bytes.forEach(function (b) { bin += String.fromCharCode(b); });
+      return "data:application/json;base64," + btoa(bin);
+    }
+
+    /* ---------------- formatting ---------------- */
+    function fmt(n) {
+      if (n === null || n === undefined || isNaN(n)) return "—";
+      return Number(n).toLocaleString("en-US", { maximumFractionDigits: 8 });
+    }
+    function fmtLoop(n) { return n === null || n === undefined ? "—" : fmt(n) + " LOOP"; }
+    function shortAddr(a) {
+      if (!a) return "—";
+      return a.slice(0, 6) + "…" + a.slice(-4);
+    }
+    function timeAgo(iso) {
+      if (!iso) return "—";
+      var diff = Math.max(0, Date.now() - new Date(iso).getTime());
+      var s = Math.floor(diff / 1000);
+      if (s < 5) return "just now";
+      if (s < 60) return s + "s ago";
+      var m = Math.floor(s / 60);
+      if (m < 60) return m + "m ago";
+      var h = Math.floor(m / 60);
+      if (h < 24) return h + "h ago";
+      return Math.floor(h / 24) + "d ago";
+    }
+    function fullDate(iso) {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+    }
+    function esc(s) {
+      return String(s === null || s === undefined ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+    // Deterministic identicon (SVG data URI) generated from a wallet address.
+    function identicon(address, size) {
+      var a = (address || ZERO_ADDRESS).toLowerCase().replace(/^0x/, "");
+      var hue = parseInt(a.slice(0, 4), 16) % 360;
+      var hue2 = parseInt(a.slice(4, 8), 16) % 360;
+      var cells = "";
+      for (var y = 0; y < 5; y++) {
+        for (var x = 0; x < 3; x++) {
+          var idx = y * 3 + x;
+          var on = parseInt(a.charAt((idx * 2) % 38) + a.charAt((idx * 2 + 1) % 38), 16) % 2 === 0;
+          if (!on) continue;
+          var rect = '<rect x="' + (x * 20) + '" y="' + (y * 20) + '" width="20" height="20" fill="hsl(' + hue + ' 65% 55%)"/>';
+          cells += rect;
+          if (x !== 2) cells += '<rect x="' + ((4 - x) * 20) + '" y="' + (y * 20) + '" width="20" height="20" fill="hsl(' + hue + ' 65% 55%)"/>';
+        }
+      }
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="hsl(' + hue2 + ' 40% 26%)"/>' + cells + "</svg>";
+      return "data:image/svg+xml," + encodeURIComponent(svg);
+    }
+    function avatarImg(address, px) {
+      return '<img class="avatar" src="' + identicon(address) + '" width="' + px + '" height="' + px + '" alt="" loading="lazy" />';
+    }
+    var VERIFIED_SVG = '<span class="verified" title="Verified collection"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.8 14.5 4l3.3-.3 1 3.1 3 1.4-1.2 3.1 1.2 3.1-3 1.4-1 3.1-3.3-.3L12 22.2 9.5 20l-3.3.3-1-3.1-3-1.4L3.4 12 2.2 8.9l3-1.4 1-3.1 3.3.3Z"/><path d="m8.8 12.2 2.2 2.2 4.2-4.4" stroke="#fff" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+    var LOOP_MARK_SVG = '<svg viewBox="0 0 24 24" fill="none"><path d="M7.5 8.2c-2 .9-3.3 2.2-3.3 3.8 0 2.3 2.7 4 6 4 1.5 0 2.9-.4 4-1M16.5 15.8c2-.9 3.3-2.2 3.3-3.8 0-2.3-2.7-4-6-4-1.5 0-2.9.4-4 1" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><circle cx="7.6" cy="12" r="1.6" fill="currentColor"/><circle cx="16.4" cy="12" r="1.6" fill="currentColor"/></svg>';
+
+    /* ---------------- IPFS / metadata ---------------- */
+    function ipfsCid(uri) {
+      if (!uri || uri.indexOf("ipfs://") !== 0) return null;
+      var cid = uri.slice(7).split("/")[0] || "";
+      if (/^Qm[1-9A-HJ-NP-Za-km-z]{44}$/.test(cid)) return cid;
+      if (/^baf[a-z0-9]{20,}$/.test(cid)) return cid;
+      return null;
+    }
+    function ipfsToGateway(uri, gateway) {
+      if (!uri) return null;
+      if (uri.indexOf("ipfs://") === 0) return gateway + uri.slice(7);
+      if (/^https?:\/\//.test(uri) || uri.indexOf("data:") === 0) return uri;
+      if (/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[a-z0-9]{20,})$/.test(uri)) return gateway + uri;
+      return null;
+    }
+    function fetchWithTimeout(url, ms) {
+      var ctrl = new AbortController();
+      var timer = setTimeout(function () { ctrl.abort(); }, ms || 7000);
+      return fetch(url, { signal: ctrl.signal, redirect: "follow" })
+        .then(function (r) { clearTimeout(timer); if (!r.ok) throw new Error("HTTP " + r.status); return r; })
+        .catch(function (e) { clearTimeout(timer); throw e; });
+    }
+    function fetchJsonFromGateways(cid, path) {
+      var chain = Promise.reject(new Error("start"));
+      IPFS_GATEWAYS.forEach(function (gw) {
+        chain = chain.catch(function () {
+          return fetchWithTimeout(gw + cid + path, 7000).then(function (r) { return r.json(); });
+        });
+      });
+      return chain.catch(function () { return null; });
+    }
+    var UNRESOLVED_META = { status: "unresolved", name: null, description: null, imageUrl: null, imageFallbackUrl: null, externalUrl: null, traits: [] };
+    function metadataFromJson(json) {
+      if (!json || typeof json !== "object") return UNRESOLVED_META;
+      var name = typeof json.name === "string" ? json.name : null;
+      var description = typeof json.description === "string" ? json.description : null;
+      var externalUrl = typeof json.external_url === "string" ? json.external_url : null;
+      var imageRaw = typeof json.image === "string" ? json.image : null;
+      var imageUrl = imageRaw ? ipfsToGateway(imageRaw, IPFS_GATEWAYS[0]) : null;
+      var imageFallbackUrl = imageRaw ? ipfsToGateway(imageRaw, IPFS_GATEWAYS[1]) : null;
+      var traits = [];
+      if (Array.isArray(json.attributes)) {
+        json.attributes.forEach(function (attr) {
+          if (attr && typeof attr === "object") {
+            var label = typeof attr.trait_type === "string" ? attr.trait_type : (typeof attr.label === "string" ? attr.label : null);
+            var value = attr.value !== undefined && attr.value !== null ? String(attr.value) : null;
+            if (label && value) traits.push({ label: label, value: value });
+          }
+        });
+      }
+      if (!name && !description && !imageUrl) return UNRESOLVED_META;
+      return { status: "resolved", name: name, description: description, imageUrl: imageUrl, imageFallbackUrl: imageFallbackUrl, imageRaw: imageRaw, externalUrl: externalUrl, traits: traits };
+    }
+    function fetchTokenMetadata(tokenURI) {
+      try {
+        if (tokenURI.indexOf("data:application/json") === 0) {
+          var comma = tokenURI.indexOf(",");
+          if (comma < 0) return Promise.resolve(UNRESOLVED_META);
+          var payload = tokenURI.slice(comma + 1);
+          var jsonText = tokenURI.slice(0, comma).indexOf("base64") >= 0
+            ? new TextDecoder().decode(Uint8Array.from(atob(payload), function (c) { return c.charCodeAt(0); }))
+            : decodeURIComponent(payload);
+          return Promise.resolve(metadataFromJson(JSON.parse(jsonText)));
+        }
+        var cid = ipfsCid(tokenURI);
+        if (cid) {
+          var rest = tokenURI.slice(7 + cid.length);
+          return fetchJsonFromGateways(cid, rest).then(function (parsed) {
+            return parsed && typeof parsed === "object" ? metadataFromJson(parsed) : UNRESOLVED_META;
+          });
+        }
+        if (/^https?:\/\//.test(tokenURI)) {
+          return fetchWithTimeout(tokenURI, 7000).then(function (r) { return r.json(); })
+            .then(function (parsed) { return metadataFromJson(parsed); })
+            .catch(function () { return UNRESOLVED_META; });
+        }
+        return Promise.resolve(UNRESOLVED_META);
+      } catch (e) {
+        return Promise.resolve(UNRESOLVED_META);
+      }
+    }
+    // Cycle an <img> through the IPFS gateways when one fails.
+    window.__imgFallback = function (img) {
+      var ipfs = img.getAttribute("data-ipfs");
+      var idx = Number(img.getAttribute("data-gw") || "0");
+      if (ipfs && idx + 1 < IPFS_GATEWAYS.length) {
+        img.setAttribute("data-gw", String(idx + 1));
+        img.src = IPFS_GATEWAYS[idx + 1] + ipfs;
+        return;
+      }
+      img.style.display = "none";
+      var ph = img.parentElement ? img.parentElement.querySelector(".thumb-ph") : null;
+      if (ph) ph.style.display = "grid";
+    };
+    function tokenImgHtml(token, cls) {
+      if (token.imageUrl) {
+        var ipfsAttr = "";
+        if (token.imageRaw && token.imageRaw.indexOf("ipfs://") === 0) ipfsAttr = ' data-ipfs="' + esc(token.imageRaw.slice(7)) + '" data-gw="0"';
+        return '<img class="' + (cls || "") + '" src="' + esc(token.imageUrl) + '" alt="' + esc(tokenTitle(token)) + '" loading="lazy" onerror="__imgFallback(this)"' + ipfsAttr + ' />' +
+          '<span class="thumb-ph" style="display:none">' + LOOP_MARK_SVG + '<span class="ph-id">#' + token.tokenId + "</span></span>";
+      }
+      return '<span class="thumb-ph">' + LOOP_MARK_SVG + '<span class="ph-id">#' + token.tokenId + "</span></span>";
+    }
+    function tokenTitle(t) { return t.name || ("LMNFT #" + t.tokenId); }
+    function artworkKey(t) { return t.imageUrl ? "img:" + t.imageUrl : "tok:" + t.tokenId; }
+
+    /* ---------------- global state ---------------- */
+    var S = {
+      loaded: false, loading: false, online: false, blockNumber: 0, checkedAt: null,
+      contracts: null, tokens: [], tokenById: new Map(), events: [], salesAll: [],
+      holders: [], totals: { minted: 0, activeListings: 0, floorLoop: null, owners: 0, salesCount: 0, volumeLoop: 0, activeOffers: 0 },
+      rarity: new Map(), metaCache: new Map(), loadError: null
+    };
+    var W = { address: null, balanceLoop: null, busy: false, busyLabel: "" };
+
+    function loadMarketplace() {
+      if (S.loading) return Promise.resolve();
+      S.loading = true;
+      var checkedAt = new Date().toISOString();
+      return Promise.all([
+        rpcSingle("eth_chainId", []),
+        rpcSingle("eth_blockNumber", [])
+      ]).then(function (head) {
+        var chainHex = head[0], blockHex = head[1];
+        if (!chainHex || !blockHex) {
+          S.online = false; S.loadError = "The Loop Network RPC did not answer. Check your connection — this page reads everything live, so nothing can be shown offline.";
+          S.loaded = true; S.loading = false;
+          return null;
+        }
+        S.online = true; S.loadError = null;
+        S.blockNumber = parseInt(blockHex, 16);
+        var infoSpecs = [
+          ethCall(NFT_CONTRACT, SEL.name), ethCall(NFT_CONTRACT, SEL.symbol), ethCall(NFT_CONTRACT, SEL.owner),
+          { method: "eth_getCode", params: [NFT_CONTRACT, "latest"] },
+          ethCall(MARKETPLACE_CONTRACT, SEL.nftGetter), ethCall(MARKETPLACE_CONTRACT, SEL.feeRecipient),
+          ethCall(MARKETPLACE_CONTRACT, SEL.feeBps), ethCall(MARKETPLACE_CONTRACT, SEL.owner),
+          { method: "eth_getCode", params: [MARKETPLACE_CONTRACT, "latest"] }
+        ];
+        return rpcBatch(infoSpecs).then(function (info) {
+          var asHex = function (v) { return typeof v === "string" ? v : null; };
+          var words = function (v) { return typeof v === "string" ? hexWords(v) : []; };
+          var nftCode = asHex(info[3]) || "0x";
+          var mktCode = asHex(info[8]) || "0x";
+          var feeBps = Number(wordToBigInt(words(info[6])[0]));
+          S.contracts = {
+            nftName: decodeStringResult(asHex(info[0])) || "Loop Market NFT",
+            nftSymbol: decodeStringResult(asHex(info[1])) || "LMNFT",
+            nftOwner: wordToAddress(words(info[2])[0]),
+            nftCodeBytes: Math.max(0, (nftCode.length - 2) / 2),
+            linkedNft: wordToAddress(words(info[4])[0]),
+            feeRecipient: wordToAddress(words(info[5])[0]),
+            feeBps: feeBps || 250,
+            feePercent: (feeBps || 250) / 100,
+            marketplaceOwner: wordToAddress(words(info[7])[0]),
+            marketplaceCodeBytes: Math.max(0, (mktCode.length - 2) / 2)
+          };
+          S.contracts.linked = S.contracts.linkedNft.toLowerCase() === NFT_CONTRACT.toLowerCase();
+          // Supply discovery: token IDs are sequential from 1 with no burn
+          // function, so probe ownerOf() in chunks until the first gap.
+          return probeSupply(1, []).then(function (found) {
+            var existingIds = found.ids, ownerById = found.owners;
+            var oneLoopWei = padUint(10n ** 18n);
+            var specs = [];
+            existingIds.forEach(function (id) {
+              specs.push(ethCall(NFT_CONTRACT, SEL.tokenURI + padUint(id)));
+              specs.push(ethCall(MARKETPLACE_CONTRACT, SEL.listings + padUint(id)));
+              specs.push(ethCall(MARKETPLACE_CONTRACT, SEL.offers + padUint(id)));
+              specs.push(ethCall(NFT_CONTRACT, SEL.royaltyInfo + padUint(id) + oneLoopWei));
+            });
+            return rpcBatch(specs).then(function (res) {
+              var states = existingIds.map(function (id, idx) {
+                var base = idx * 4;
+                var lw = typeof res[base + 1] === "string" ? hexWords(res[base + 1]) : [];
+                var ow = typeof res[base + 2] === "string" ? hexWords(res[base + 2]) : [];
+                var rw = typeof res[base + 3] === "string" ? hexWords(res[base + 3]) : [];
+                var lSeller = wordToAddress(lw[0]);
+                var lActive = wordToBigInt(lw[2]) === 1n;
+                var oOfferer = wordToAddress(ow[0]);
+                var oActive = wordToBigInt(ow[2]) === 1n;
+                var royaltyAmount = wordToBigInt(rw[1]);
+                return {
+                  tokenId: id,
+                  owner: ownerById.get(id) || ZERO_ADDRESS,
+                  tokenURI: decodeStringResult(asHex(res[base])) || "",
+                  listing: (lSeller !== ZERO_ADDRESS || lActive) ? { seller: lSeller, priceLoop: weiToLoop(wordToBigInt(lw[1])), priceWei: wordToBigInt(lw[1]), active: lActive } : null,
+                  offer: (oOfferer !== ZERO_ADDRESS || oActive) ? { offerer: oOfferer, amountLoop: weiToLoop(wordToBigInt(ow[1])), amountWei: wordToBigInt(ow[1]), active: oActive } : null,
+                  royaltyReceiver: wordToAddress(rw[0]),
+                  royaltyPercent: Math.round((Number(royaltyAmount) / 1e18) * 100 * 100) / 100
+                };
+              });
+              return loadEvents().then(function (ev) {
+                // Metadata, cached by URI so silent refreshes stay cheap.
+                var metaJobs = states.map(function (st) {
+                  if (S.metaCache.has(st.tokenURI)) return Promise.resolve(S.metaCache.get(st.tokenURI));
+                  return fetchTokenMetadata(st.tokenURI).then(function (m) { S.metaCache.set(st.tokenURI, m); return m; });
+                });
+                return Promise.all(metaJobs).then(function (metas) {
+                  S.tokens = states.map(function (st, i) {
+                    var meta = metas[i] || UNRESOLVED_META;
+                    var imageRaw = null;
+                    // Recover the raw image reference for gateway cycling.
+                    return Object.assign({}, st, {
+                      metadataStatus: meta.status, name: meta.name, description: meta.description,
+                      imageUrl: meta.imageUrl, imageFallbackUrl: meta.imageFallbackUrl,
+                      imageRaw: meta.imageRaw || null, externalUrl: meta.externalUrl, traits: meta.traits
+                    });
+                  });
+                  S.tokenById = new Map(S.tokens.map(function (t) { return [t.tokenId, t]; }));
+                  S.events = ev.events;
+                  S.salesAll = ev.salesAll;
+                  finishDerived(checkedAt);
+                });
+              });
+            });
+          });
+        });
+      }).catch(function () {
+        S.online = false; S.loaded = true;
+        S.loadError = "Could not reach the Loop Network RPC. This page reads everything live from the chain, so nothing can be shown until the connection is back.";
+      }).then(function () { S.loading = false; });
+    }
+    function probeSupply(startId, acc) {
+      var CHUNK = 40, MAX_ID = 400;
+      var specs = [];
+      for (var id = startId; id < startId + CHUNK && id <= MAX_ID; id++) specs.push(ethCall(NFT_CONTRACT, SEL.ownerOf + padUint(id)));
+      return rpcBatch(specs).then(function (res) {
+        var gap = false;
+        res.forEach(function (hex, i) {
+          var id = startId + i;
+          if (gap) return;
+          if (typeof hex === "string" && hex !== "0x") {
+            acc.push({ id: id, owner: wordToAddress(hexWords(hex)[0]) });
+          } else { gap = true; }
+        });
+        var lastId = startId + specs.length - 1;
+        if (!gap && specs.length === CHUNK && lastId < MAX_ID) return probeSupply(lastId + 1, acc);
+        var owners = new Map();
+        acc.forEach(function (e) { owners.set(e.id, e.owner); });
+        return { ids: acc.map(function (e) { return e.id; }), owners: owners };
+      });
+    }
+    function loadEvents() {
+      var fromBlockHex = "0x" + DEPLOY_FROM_BLOCK.toString(16);
+      return Promise.all([
+        rpcSingle("eth_getLogs", [{ address: NFT_CONTRACT, fromBlock: fromBlockHex, toBlock: "latest" }]),
+        rpcSingle("eth_getLogs", [{ address: MARKETPLACE_CONTRACT, fromBlock: fromBlockHex, toBlock: "latest" }])
+      ]).then(function (both) {
+        var allLogs = (both[0] || []).concat(both[1] || []);
+        var topicSet = {};
+        Object.keys(TOPIC).forEach(function (k) { topicSet[TOPIC[k]] = true; });
+        var relevant = allLogs.filter(function (l) { return topicSet[(l.topics[0] || "").toLowerCase()]; });
+        var blockNumbers = [];
+        var seen = {};
+        relevant.forEach(function (l) {
+          var b = parseInt(l.blockNumber, 16);
+          if (!seen[b]) { seen[b] = true; blockNumbers.push(b); }
+        });
+        var blockSpecs = blockNumbers.map(function (b) {
+          return { method: "eth_getBlockByNumber", params: ["0x" + b.toString(16), false] };
+        });
+        return rpcBatch(blockSpecs).then(function (blockResults) {
+          var tsByBlock = new Map();
+          blockNumbers.forEach(function (b, i) {
+            var blk = blockResults[i];
+            if (blk && typeof blk.timestamp === "string") tsByBlock.set(b, new Date(parseInt(blk.timestamp, 16) * 1000).toISOString());
+          });
+          var saleTx = {}, acceptedTx = {};
+          relevant.forEach(function (l) {
+            var t0 = (l.topics[0] || "").toLowerCase();
+            if (t0 === TOPIC.sale) saleTx[l.transactionHash.toLowerCase()] = true;
+            if (t0 === TOPIC.offerAccepted) acceptedTx[l.transactionHash.toLowerCase()] = true;
+          });
+          var events = [], salesAll = [];
+          var salesCount = 0, volumeWei = 0n;
+          relevant.forEach(function (log) {
+            var t0 = (log.topics[0] || "").toLowerCase();
+            var blockNumber = parseInt(log.blockNumber, 16);
+            var base = {
+              txHash: log.transactionHash, blockNumber: blockNumber,
+              logIndex: parseInt(log.logIndex, 16),
+              timestamp: tsByBlock.get(blockNumber) || null,
+              explorerUrl: EXPLORER_URL + "/tx/" + log.transactionHash
+            };
+            var dw = hexWords(log.data || "0x");
+            if (t0 === TOPIC.minted) {
+              events.push(Object.assign({}, base, { kind: "mint", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: topicToAddress(log.topics[3]), priceLoop: null, feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+            } else if (t0 === TOPIC.transfer) {
+              var from = topicToAddress(log.topics[1]), to = topicToAddress(log.topics[2]);
+              if (from === ZERO_ADDRESS) return;
+              if (saleTx[log.transactionHash.toLowerCase()]) return;
+              events.push(Object.assign({}, base, { kind: "transfer", tokenId: topicToUint(log.topics[3]), from: from, to: to, priceLoop: null, feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+            } else if (t0 === TOPIC.listed) {
+              events.push(Object.assign({}, base, { kind: "listed", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+            } else if (t0 === TOPIC.listingCancelled) {
+              events.push(Object.assign({}, base, { kind: "listing-cancelled", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: null, feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+            } else if (t0 === TOPIC.sale) {
+              var price = wordToBigInt(dw[0]);
+              salesCount += 1; volumeWei += price;
+              var saleRec = {
+                tokenId: topicToUint(log.topics[1]), seller: topicToAddress(log.topics[2]), buyer: topicToAddress(log.topics[3]),
+                priceLoop: weiToLoop(price), priceWei: price, timestamp: base.timestamp, txHash: log.transactionHash,
+                blockNumber: blockNumber, viaOffer: !!acceptedTx[log.transactionHash.toLowerCase()]
+              };
+              salesAll.push(saleRec);
+              if (acceptedTx[log.transactionHash.toLowerCase()]) return;
+              events.push(Object.assign({}, base, { kind: "sale", tokenId: saleRec.tokenId, from: saleRec.seller, to: saleRec.buyer, priceLoop: saleRec.priceLoop, feeLoop: weiToLoop(wordToBigInt(dw[1])), royaltyLoop: weiToLoop(wordToBigInt(dw[2])), royaltyReceiver: wordToAddress(dw[3]) }));
+            } else if (t0 === TOPIC.offerMade) {
+              events.push(Object.assign({}, base, { kind: "offer-made", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+            } else if (t0 === TOPIC.offerWithdrawn) {
+              events.push(Object.assign({}, base, { kind: "offer-withdrawn", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+            } else if (t0 === TOPIC.offerAccepted) {
+              events.push(Object.assign({}, base, { kind: "offer-accepted", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: topicToAddress(log.topics[3]), priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+            }
+          });
+          events.sort(function (a, b) { return b.blockNumber - a.blockNumber || b.logIndex - a.logIndex; });
+          salesAll.sort(function (a, b) { return b.blockNumber - a.blockNumber; });
+          return { events: events.slice(0, 150), salesAll: salesAll, salesCount: salesCount, volumeWei: volumeWei };
+        });
+      });
+    }
+    function finishDerived(checkedAt) {
+      S.checkedAt = checkedAt;
+      S.loaded = true;
+      // Rarity ranks from real trait frequencies.
+      var freq = new Map();
+      var scored = S.tokens.filter(function (t) { return t.traits.length > 0; });
+      scored.forEach(function (t) {
+        t.traits.forEach(function (tr) {
+          var k = tr.label + ":" + tr.value;
+          freq.set(k, (freq.get(k) || 0) + 1);
+        });
+      });
+      var scores = scored.map(function (t) {
+        return { id: t.tokenId, score: t.traits.reduce(function (s, tr) { return s + 1 / (freq.get(tr.label + ":" + tr.value) || 1); }, 0) };
+      });
+      scores.sort(function (a, b) { return b.score - a.score || a.id - b.id; });
+      S.rarity = new Map();
+      scores.forEach(function (s, i) { S.rarity.set(s.id, i + 1); });
+      S.traitFreq = freq;
+      // Holders + totals.
+      var holderMap = new Map();
+      S.tokens.forEach(function (t) {
+        var key = t.owner.toLowerCase();
+        var e = holderMap.get(key) || { address: t.owner, tokenCount: 0, listedCount: 0, floorValueLoop: 0 };
+        e.tokenCount += 1;
+        if (t.listing && t.listing.active) { e.listedCount += 1; e.floorValueLoop = Math.round((e.floorValueLoop + t.listing.priceLoop) * 1e8) / 1e8; }
+        holderMap.set(key, e);
+      });
+      S.holders = Array.from(holderMap.values()).sort(function (a, b) { return b.tokenCount - a.tokenCount; });
+      var activeListings = S.tokens.filter(function (t) { return t.listing && t.listing.active; });
+      var volumeLoop = 0;
+      S.salesAll.forEach(function (s) { volumeLoop += s.priceLoop; });
+      S.totals = {
+        minted: S.tokens.length,
+        activeListings: activeListings.length,
+        floorLoop: activeListings.length ? Math.min.apply(null, activeListings.map(function (t) { return t.listing.priceLoop; })) : null,
+        owners: S.holders.length,
+        salesCount: S.salesAll.length,
+        volumeLoop: Math.round(volumeLoop * 1e8) / 1e8,
+        activeOffers: S.tokens.filter(function (t) { return t.offer && t.offer.active; }).length
+      };
+    }
+    function salesInWindow(hours) {
+      var cutoff = Date.now() - hours * 3600 * 1000;
+      return S.salesAll.filter(function (s) { return s.timestamp && new Date(s.timestamp).getTime() >= cutoff; });
+    }
+    function rankAccounts(role, hours) {
+      // role: "buyer" | "seller". Ranked by real on-chain volume.
+      var list = hours ? salesInWindow(hours) : S.salesAll;
+      var map = new Map();
+      list.forEach(function (s) {
+        var addr = (role === "buyer" ? s.buyer : s.seller).toLowerCase();
+        var e = map.get(addr) || { address: addr, volume: 0, trades: 0, tokenIds: [] };
+        e.volume = Math.round((e.volume + s.priceLoop) * 1e8) / 1e8;
+        e.trades += 1;
+        e.tokenIds.push(s.tokenId);
+        map.set(addr, e);
+      });
+      return Array.from(map.values()).sort(function (a, b) { return b.volume - a.volume || b.trades - a.trades; });
+    }
+</script>
+
+    <script>
+    /* ---------------- toasts ---------------- */
+    function toast(kind, title, sub, sticky) {
+      var box = document.getElementById("toasts");
+      var el = document.createElement("div");
+      el.className = "toast " + kind;
+      var icon = kind === "ok"
+        ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>'
+        : kind === "err"
+          ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>'
+          : '<span class="spin"></span>';
+      el.innerHTML = '<span class="t-ic">' + icon + '</span><span style="flex:1;min-width:0"><b>' + esc(title) + "</b>" +
+        (sub ? '<span class="t-sub">' + sub + "</span>" : "") + "</span>";
+      box.appendChild(el);
+      if (!sticky) setTimeout(function () { el.style.opacity = "0"; el.style.transition = "opacity .3s"; setTimeout(function () { el.remove(); }, 320); }, kind === "err" ? 7000 : 4600);
+      return el;
+    }
+    function toastTx(title, hash) {
+      return toast("info", title, 'Waiting for confirmation · <a href="' + EXPLORER_URL + "/tx/" + hash + '" target="_blank" rel="noopener">view transaction ↗</a>', true);
+    }
+
+    /* ---------------- wallet ---------------- */
+    function ethProvider() { return typeof window !== "undefined" ? window.ethereum : undefined; }
+    function renderWalletSlot() {
+      var slot = document.getElementById("wallet-slot");
+      if (W.address) {
+        slot.innerHTML = '<button class="wallet-btn" id="wallet-btn" title="Connected wallet — open your profile">' +
+          '<span class="dot-live"></span><span class="addr">' + shortAddr(W.address) + "</span></button>";
+        document.getElementById("wallet-btn").addEventListener("click", function () { location.hash = "#/profile/" + W.address; });
+      } else {
+        slot.innerHTML = '<button class="wallet-btn icon-only" id="wallet-btn" aria-label="Connect wallet" title="Connect wallet">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg></button>';
+        document.getElementById("wallet-btn").addEventListener("click", connectWallet);
+      }
+      renderDrawerProfile();
+    }
+    function renderDrawerProfile() {
+      var box = document.getElementById("drawer-profile");
+      if (!box) return;
+      if (W.address) {
+        box.innerHTML =
+          '<div style="display:flex;gap:12px;align-items:center">' + avatarImg(W.address, 44) +
+          '<div style="min-width:0"><div style="font-weight:800" class="addr">' + shortAddr(W.address) + '</div>' +
+          '<div class="small dim">Balance: ' + (W.balanceLoop !== null ? fmt(W.balanceLoop) + " LOOP" : "—") + "</div></div></div>" +
+          '<div style="display:flex;gap:8px;margin-top:12px">' +
+          '<a class="btn btn-primary btn-sm" style="flex:1" href="#/profile/' + W.address + '">View profile</a>' +
+          '<button class="btn btn-ghost btn-sm" id="drawer-disconnect">Disconnect</button></div>';
+        var d = document.getElementById("drawer-disconnect");
+        if (d) d.addEventListener("click", function () { disconnectWallet(); });
+      } else {
+        box.innerHTML =
+          '<div style="font-weight:800">No wallet connected</div>' +
+          '<div class="small dim" style="margin-top:3px">Connect MetaMask or Brave Wallet to buy, list, offer and mint on Loop Network.</div>' +
+          '<button class="btn btn-primary btn-block" id="drawer-connect" style="margin-top:12px">Connect Wallet</button>';
+        var c = document.getElementById("drawer-connect");
+        if (c) c.addEventListener("click", connectWallet);
+      }
+    }
+    function refreshBalance() {
+      if (!W.address) { W.balanceLoop = null; return; }
+      rpcSingle("eth_getBalance", [W.address, "latest"]).then(function (hex) {
+        if (typeof hex === "string") { W.balanceLoop = weiToLoop(BigInt(hex)); renderWalletSlot(); }
+      });
+    }
+    function ensureLoopChain() {
+      var eth = ethProvider();
+      if (!eth) return Promise.resolve(false);
+      return eth.request({ method: "eth_chainId" }).then(function (id) {
+        if (String(id).toLowerCase() === CHAIN_HEX) return true;
+        return eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_HEX }] })
+          .then(function () { return true; })
+          .catch(function (err) {
+            if (err && err.code === 4902) {
+              return eth.request({
+                method: "wallet_addEthereumChain",
+                params: [{
+                  chainId: CHAIN_HEX, chainName: "Loop Network Mainnet",
+                  nativeCurrency: { name: "LOOP", symbol: "LOOP", decimals: 18 },
+                  rpcUrls: [RPC_URL], blockExplorerUrls: [EXPLORER_URL]
+                }]
+              }).then(function () { return true; }).catch(function () { return false; });
+            }
+            return false;
+          });
+      }).catch(function () { return false; });
+    }
+    function connectWallet() {
+      var eth = ethProvider();
+      if (!eth) {
+        toast("err", "No wallet found", "Open this page in a browser with MetaMask or Brave Wallet installed — wallet connection needs a real https origin and an injected wallet.");
+        return;
+      }
+      eth.request({ method: "eth_requestAccounts" }).then(function (accounts) {
+        if (!accounts || !accounts[0]) throw new Error("No account returned");
+        W.address = accounts[0].toLowerCase();
+        return ensureLoopChain().then(function (ok) {
+          renderWalletSlot(); refreshBalance();
+          if (ok) toast("ok", "Wallet connected", "Connected as " + shortAddr(W.address) + " on Loop Network Mainnet.");
+          else toast("err", "Wrong network", "Please switch your wallet to Loop Network Mainnet (Chain ID 15551) before signing transactions.");
+          rerender();
+        });
+      }).catch(function (err) {
+        toast("err", "Connection rejected", esc(err && err.message ? String(err.message).slice(0, 140) : "The wallet did not connect."));
+      });
+    }
+    function disconnectWallet() {
+      W.address = null; W.balanceLoop = null;
+      renderWalletSlot();
+      toast("info", "Wallet disconnected", "This only clears the connection in this page — nothing on-chain changes.");
+      rerender();
+    }
+    function initWalletListeners() {
+      var eth = ethProvider();
+      if (!eth || !eth.on) return;
+      eth.on("accountsChanged", function (accounts) {
+        W.address = accounts && accounts[0] ? accounts[0].toLowerCase() : null;
+        W.balanceLoop = null;
+        renderWalletSlot(); refreshBalance(); rerender();
+      });
+      eth.on("chainChanged", function () { refreshBalance(); });
+      // Silent reconnect when the wallet already authorised this origin.
+      eth.request({ method: "eth_accounts" }).then(function (accounts) {
+        if (accounts && accounts[0]) { W.address = accounts[0].toLowerCase(); renderWalletSlot(); refreshBalance(); rerender(); }
+      }).catch(function () { /* not authorised yet */ });
+    }
+
+    /* ---------------- transactions ---------------- */
+    function waitForReceipt(hash) {
+      var tries = 0;
+      return new Promise(function (resolve) {
+        (function poll() {
+          tries += 1;
+          rpcSingle("eth_getTransactionReceipt", [hash]).then(function (r) {
+            if (r) { resolve(r); return; }
+            if (tries > 40) { resolve(null); return; }
+            setTimeout(poll, 2500);
+          });
+        })();
+      });
+    }
+    function sendTx(label, to, data, valueWei) {
+      var eth = ethProvider();
+      if (!eth || !W.address) { toast("err", "Connect your wallet first", "Buying, listing, offering and minting are signed by your own wallet."); return Promise.resolve(null); }
+      if (W.busy) { toast("info", "A transaction is already in progress", "Wait for " + W.busyLabel + " to finish in your wallet."); return Promise.resolve(null); }
+      return ensureLoopChain().then(function (ok) {
+        if (!ok) { toast("err", "Wrong network", "Switch your wallet to Loop Network Mainnet (Chain ID 15551) and try again."); return null; }
+        W.busy = true; W.busyLabel = label; rerender();
+        var tx = { from: W.address, to: to, data: data };
+        if (valueWei && valueWei > 0n) tx.value = "0x" + valueWei.toString(16);
+        return eth.request({ method: "eth_sendTransaction", params: [tx] }).then(function (hash) {
+          var pending = toastTx(label + " — submitted", hash);
+          return waitForReceipt(hash).then(function (receipt) {
+            pending.remove();
+            W.busy = false; W.busyLabel = "";
+            if (receipt && receipt.status === "0x1") {
+              toast("ok", label + " — confirmed", 'On-chain in block ' + parseInt(receipt.blockNumber, 16).toLocaleString("en-US") + '. <a href="' + EXPLORER_URL + "/tx/" + hash + '" target="_blank" rel="noopener">View on the explorer ↗</a>');
+              refreshBalance();
+              setTimeout(function () { loadMarketplace().then(rerender); }, 2500);
+              return receipt;
+            }
+            if (receipt) toast("err", label + " — reverted", "The transaction was mined but reverted. Check it on the explorer for details.");
+            else toast("err", label + " — not confirmed yet", "No receipt after 100 seconds. Check the transaction on the explorer before retrying.");
+            rerender();
+            return null;
+          });
+        }).catch(function (err) {
+          W.busy = false; W.busyLabel = "";
+          var msg = err && err.code === 4001 ? "You rejected the signature in your wallet." : (err && err.message ? String(err.message).slice(0, 160) : "The wallet refused the transaction.");
+          toast("err", label + " — not sent", esc(msg));
+          rerender();
+          return null;
+        });
+      });
+    }
+    function isApprovedForMarketplace(tokenId) {
+      var specs = [
+        ethCall(NFT_CONTRACT, SEL.getApproved + padUint(tokenId)),
+        ethCall(NFT_CONTRACT, SEL.isApprovedForAll + addrWord(W.address) + addrWord(MARKETPLACE_CONTRACT))
+      ];
+      return rpcBatch(specs).then(function (res) {
+        var approved = typeof res[0] === "string" ? wordToAddress(hexWords(res[0])[0]) : ZERO_ADDRESS;
+        var forAll = typeof res[1] === "string" ? wordToBigInt(hexWords(res[1])[0]) === 1n : false;
+        return approved.toLowerCase() === MARKETPLACE_CONTRACT.toLowerCase() || forAll;
+      });
+    }
+    function ensureApproval(tokenId) {
+      return isApprovedForMarketplace(tokenId).then(function (ok) {
+        if (ok) return true;
+        return sendTx("Approve marketplace for #" + tokenId, NFT_CONTRACT, SEL.approve + addrWord(MARKETPLACE_CONTRACT) + uintWord(tokenId), 0n)
+          .then(function (r) { return !!r; });
+      });
+    }
+    function txBuy(token) {
+      if (!token.listing || !token.listing.active) return;
+      sendTx("Buy " + tokenTitle(token), MARKETPLACE_CONTRACT, SEL.buy + uintWord(token.tokenId), loopNumberToWei(token.listing.priceLoop));
+    }
+    function txCancelListing(token) {
+      sendTx("Cancel listing #" + token.tokenId, MARKETPLACE_CONTRACT, SEL.cancelListing + uintWord(token.tokenId), 0n);
+    }
+    function txList(token, priceInput) {
+      var wei = parseLoopToWei(priceInput);
+      if (!wei) { toast("err", "Enter a valid price", "The listing price must be a LOOP amount above zero, for example 0.25."); return; }
+      ensureApproval(token.tokenId).then(function (ok) {
+        if (!ok) return;
+        sendTx("List " + tokenTitle(token), MARKETPLACE_CONTRACT, SEL.list + uintWord(token.tokenId) + wei.toString(16).padStart(64, "0"), 0n);
+      });
+    }
+    function txMakeOffer(token, amountInput) {
+      var wei = parseLoopToWei(amountInput);
+      if (!wei) { toast("err", "Enter a valid offer", "The offer amount must be a LOOP amount above zero. The full amount is escrowed in the marketplace contract."); return; }
+      sendTx("Offer on " + tokenTitle(token), MARKETPLACE_CONTRACT, SEL.makeOffer + uintWord(token.tokenId), wei);
+    }
+    function txWithdrawOffer(token) {
+      sendTx("Withdraw offer on #" + token.tokenId, MARKETPLACE_CONTRACT, SEL.withdrawOffer + uintWord(token.tokenId), 0n);
+    }
+    function txAcceptOffer(token) {
+      ensureApproval(token.tokenId).then(function (ok) {
+        if (!ok) return;
+        sendTx("Accept offer on " + tokenTitle(token), MARKETPLACE_CONTRACT, SEL.acceptOffer + uintWord(token.tokenId), 0n);
+      });
+    }
+
+    /* ---------------- shared UI pieces ---------------- */
+    function addrLink(address, opts) {
+      opts = opts || {};
+      if (!address) return '<span class="dim">—</span>';
+      var label = opts.full ? address : shortAddr(address);
+      return '<button class="addr-btn" data-profile="' + esc(address.toLowerCase()) + '" title="' + esc(address) + '">' + esc(label) + "</button>";
+    }
+    function addrWithAvatar(address, px) {
+      if (!address) return '<span class="dim">—</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:8px;min-width:0">' + avatarImg(address, px || 24) + addrLink(address) + "</span>";
+    }
+    function tokenCardHtml(token) {
+      var priceHtml = token.listing && token.listing.active
+        ? '<span class="p-label">Price</span><span class="p-value tnum">' + fmt(token.listing.priceLoop) + " LOOP</span>"
+        : '<span class="p-label">Price</span><span class="p-value dim" style="font-weight:600">Not listed</span>';
+      var rank = S.rarity.get(token.tokenId);
+      return '<button class="nft-card" data-token="' + token.tokenId + '">' +
+        '<span class="nft-media" style="display:block">' + tokenImgHtml(token) + "</span>" +
+        '<span class="nft-body" style="display:block">' +
+        '<span class="nft-name" style="display:block">' + esc(tokenTitle(token)) + "</span>" +
+        '<span class="nft-sub" style="display:block">' + esc(S.contracts ? S.contracts.nftName : "Loop Market NFT") + " · #" + token.tokenId + (rank ? ' · <span title="Rarity rank from on-chain trait frequencies">Rarity #' + rank + "</span>" : "") + "</span>" +
+        '<span class="nft-price" style="display:flex">' + priceHtml + "</span>" +
+        "</span></button>";
+    }
+    function bindTokenCards(root) {
+      root.querySelectorAll("[data-token]").forEach(function (el) {
+        el.addEventListener("click", function () { location.hash = "#/token/" + el.getAttribute("data-token"); });
+      });
+      root.querySelectorAll("[data-profile]").forEach(function (el) {
+        el.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          location.hash = "#/profile/" + el.getAttribute("data-profile");
+        });
+      });
+    }
+    function copyText(text, label) {
+      function done() { toast("ok", (label || "Copied") + " copied", esc(text)); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text); done(); });
+      } else { fallbackCopy(text); done(); }
+    }
+    function fallbackCopy(text) {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e) { /* clipboard unavailable */ }
+      ta.remove();
+    }
+    function statusLineHtml() {
+      if (!S.loaded) return "";
+      if (!S.online) return '<div class="status-line off"><span class="pulse"></span>Loop Network RPC unreachable — showing nothing rather than stale data. The page retries automatically.</div>';
+      return '<div class="status-line"><span class="pulse"></span>Live from Loop Network · Block ' + S.blockNumber.toLocaleString("en-US") + " · " + S.totals.minted + " tokens read on-chain</div>";
+    }
+    function loadingHtml(label) {
+      return '<div class="page"><h1 class="page-title">' + esc(label || "Loop Market") + '</h1>' +
+        '<div class="status-line"><span class="spin" style="color:var(--accent)"></span>Reading the live contracts on Loop Network…</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:20px"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div></div>';
+    }
+    function offlineHtml() {
+      return '<div class="page"><h1 class="page-title">Cannot reach Loop Network</h1>' +
+        '<div class="empty-note" style="margin-top:16px">' + esc(S.loadError || "The RPC did not answer.") + "<br/><br/>This marketplace has no cached or demo data — when the chain answers again, everything appears here live. Retrying automatically…</div></div>";
+    }
+  </script>
+
+    <script>
+    /* ================= EXPLORE ================= */
+    var exploreState = { heroWindow: 7, heroIndex: 0, rankTab: "buyers", heroTimer: null };
+
+    function heroSlides() {
+      // One slide per distinct artwork, ordered by each token's real sales
+      // volume (then its best single sale). With a single live collection,
+      // every slide presents that collection featuring a different token.
+      var volByToken = new Map(), bestByToken = new Map();
+      S.salesAll.forEach(function (s) {
+        volByToken.set(s.tokenId, Math.round(((volByToken.get(s.tokenId) || 0) + s.priceLoop) * 1e8) / 1e8);
+        bestByToken.set(s.tokenId, Math.max(bestByToken.get(s.tokenId) || 0, s.priceLoop));
+      });
+      var ranked = S.tokens.slice().sort(function (a, b) {
+        var dv = (volByToken.get(b.tokenId) || 0) - (volByToken.get(a.tokenId) || 0);
+        if (dv !== 0) return dv;
+        var db = (bestByToken.get(b.tokenId) || 0) - (bestByToken.get(a.tokenId) || 0);
+        if (db !== 0) return db;
+        return b.tokenId - a.tokenId;
+      });
+      var seen = {}, slides = [];
+      ranked.forEach(function (t) {
+        if (slides.length >= 7) return;
+        var key = artworkKey(t);
+        if (seen[key]) return;
+        seen[key] = true;
+        slides.push({ token: t, topSale: bestByToken.get(t.tokenId) || null });
+      });
+      return slides;
+    }
+    function heroVolume() {
+      var sales = salesInWindow(exploreState.heroWindow === 1 ? 24 : 24 * 7);
+      var vol = 0;
+      sales.forEach(function (s) { vol += s.priceLoop; });
+      return Math.round(vol * 1e8) / 1e8;
+    }
+    function renderExplore(app) {
+      if (!S.loaded) { app.innerHTML = loadingHtml("The live NFT marketplace on Loop Network"); return; }
+      if (!S.online) { app.innerHTML = offlineHtml(); return; }
+      var slides = heroSlides();
+      var collName = S.contracts.nftName;
+      var vol = heroVolume();
+      var creator = S.contracts.nftOwner;
+      var slideHtml = slides.map(function (sl, i) {
+        var t = sl.token;
+        return '<div class="car-slide"><button class="hero-card" data-token="' + t.tokenId + '">' +
+          '<span class="hero-media" style="display:block">' + tokenImgHtml(t) +
+          '<span class="hero-shade"></span>' +
+          (sl.topSale !== null ? '<span class="hero-chip">Top sale · ' + fmt(sl.topSale) + " LOOP</span>" : "") +
+          '<span class="hero-body" style="display:block">' +
+          '<span class="hero-coll" style="display:block">' + esc(collName) + VERIFIED_SVG + "</span>" +
+          '<span class="hero-by" style="display:block">Featuring ' + esc(tokenTitle(t)) + " · By " + esc(shortAddr(creator)) + "</span>" +
+          '<span class="hero-stats" style="display:flex">' +
+          '<span><span class="hs-label" style="display:block">FLOOR PRICE</span><span class="hs-value tnum" style="display:block">' + (S.totals.floorLoop !== null ? fmt(S.totals.floorLoop) + " LOOP" : "—") + "</span></span>" +
+          '<span><span class="hs-label" style="display:block">ITEMS</span><span class="hs-value tnum" style="display:block">' + S.totals.minted + "</span></span>" +
+          '<span><span class="hs-label" style="display:block">TOTAL VOLUME (' + (exploreState.heroWindow === 1 ? "1D" : "7D") + ')</span><span class="hs-value tnum" style="display:block">' + fmt(vol) + " LOOP</span></span>" +
+          "</span></span></span></button></div>";
+      }).join("");
+      var dots = slides.map(function (_, i) {
+        return '<button class="car-dot-wrap" data-hero-dot="' + i + '" aria-label="Go to slide ' + (i + 1) + '"><span class="car-dot' + (i === 0 ? " active" : "") + '"></span></button>';
+      }).join("");
+      var rankSection = renderRankSection();
+      var listed = S.tokens.filter(function (t) { return t.listing && t.listing.active; });
+      var gridTokens = (listed.length ? listed.concat(S.tokens.filter(function (t) { return !(t.listing && t.listing.active); })) : S.tokens).slice(0, 12);
+      app.innerHTML =
+        '<div class="page">' +
+        '<h1 class="hero-title">The live NFT marketplace on Loop Network</h1>' +
+        '<p class="hero-sub">Every item below is read directly from the Loop Market NFT contract — owners, listings, offers, and prices are exactly what the chain reports right now.</p>' +
+        statusLineHtml() +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:26px">' +
+        '<h2 class="section-title" style="margin:0">Top Collections <span class="hint">Trending collections by on-chain volume</span></h2>' +
+        '<span class="seg" role="group" aria-label="Hero time window">' +
+        '<button data-hero-win="1" class="' + (exploreState.heroWindow === 1 ? "active" : "") + '">1D</button>' +
+        '<button data-hero-win="7" class="' + (exploreState.heroWindow === 7 ? "active" : "") + '">7D</button></span></div>' +
+        (slides.length ?
+          '<div class="carousel" id="hero-carousel"><div class="car-viewport"><div class="car-track" id="hero-track">' + slideHtml + '</div></div>' +
+          '<div class="car-nav"><div class="car-dots" id="hero-dots">' + dots + '</div>' +
+          '<div class="car-arrows"><button class="car-arrow" id="hero-prev" aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5.5-6 6.5 6 6.5"/></svg></button>' +
+          '<button class="car-arrow" id="hero-next" aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6 6.5-6 6.5"/></svg></button></div></div></div>'
+          : '<div class="empty-note" style="margin-top:16px">No tokens have been minted yet — the first mint will appear here live.</div>') +
+        rankSection +
+        '<h2 class="section-title">Browse NFTs <span class="hint">' + (listed.length ? listed.length + " listed now · " : "") + S.totals.minted + ' minted on-chain</span></h2>' +
+        (gridTokens.length ? '<div class="nft-grid">' + gridTokens.map(tokenCardHtml).join("") + "</div>" : '<div class="empty-note">Nothing to browse yet.</div>') +
+        '<div style="margin-top:18px"><a class="btn btn-ghost" href="#/collection-profile">View the full collection</a></div>' +
+        "</div>";
+      bindTokenCards(app);
+      app.querySelectorAll("[data-hero-win]").forEach(function (b) {
+        b.addEventListener("click", function () { exploreState.heroWindow = Number(b.getAttribute("data-hero-win")); renderExplore(app); });
+      });
+      app.querySelectorAll("[data-rank-tab]").forEach(function (b) {
+        b.addEventListener("click", function () { exploreState.rankTab = b.getAttribute("data-rank-tab"); rerender(); });
+      });
+      bindRankCards(app);
+      initHeroCarousel(slides.length);
+    }
+    function renderRankSection() {
+      var tab = exploreState.rankTab;
+      var ranked = rankAccounts(tab === "buyers" ? "buyer" : "seller", 0).slice(0, 10);
+      var usedArt = {};
+      var cards = [];
+      ranked.forEach(function (entry, i) {
+        var art = null;
+        // One distinct artwork per card: prefer this account's priciest trade
+        // whose artwork is not already used in this row.
+        var theirSales = S.salesAll.filter(function (s) {
+          return (tab === "buyers" ? s.buyer : s.seller).toLowerCase() === entry.address;
+        }).sort(function (a, b) { return b.priceLoop - a.priceLoop; });
+        for (var j = 0; j < theirSales.length; j++) {
+          var tok = S.tokenById.get(theirSales[j].tokenId);
+          if (tok && !usedArt[artworkKey(tok)]) { art = tok; usedArt[artworkKey(tok)] = true; break; }
+        }
+        if (!art && theirSales.length) { var t0 = S.tokenById.get(theirSales[0].tokenId); if (t0) art = t0; }
+        cards.push({ type: "account", rank: i + 1, entry: entry, art: art });
+      });
+      // Honest filler: if fewer than 10 distinct accounts traded, fill the
+      // remaining slots with real individual sales, labelled as sales.
+      if (cards.length < 10) {
+        var represented = {};
+        ranked.forEach(function (e) { represented[e.address] = true; });
+        for (var k = 0; k < S.salesAll.length && cards.length < 10; k++) {
+          var sale = S.salesAll[k];
+          var tk = S.tokenById.get(sale.tokenId);
+          if (!tk || usedArt[artworkKey(tk)]) continue;
+          usedArt[artworkKey(tk)] = true;
+          cards.push({ type: "sale", sale: sale, art: tk });
+        }
+      }
+      var cardsHtml = cards.map(function (c) {
+        if (c.type === "account") {
+          return '<button class="rank-card" data-profile="' + esc(c.entry.address) + '">' +
+            '<span class="rank-media" style="display:block">' + (c.art ? tokenImgHtml(c.art) : "") + '<span class="rank-badge">#' + c.rank + "</span></span>" +
+            '<span class="rank-body" style="display:block"><span class="rank-who">' + avatarImg(c.entry.address, 26) + '<span class="addr">' + shortAddr(c.entry.address) + "</span></span>" +
+            '<span class="rank-meta" style="display:flex"><span><span class="rm-label" style="display:block">Volume</span><span class="rm-value tnum">' + fmt(c.entry.volume) + ' LOOP</span></span>' +
+            '<span style="text-align:right"><span class="rm-label" style="display:block">Trades</span><span class="rm-value tnum">' + c.entry.trades + "</span></span></span></span></button>";
+        }
+        return '<button class="rank-card" data-token="' + c.sale.tokenId + '">' +
+          '<span class="rank-media" style="display:block">' + tokenImgHtml(c.art) + '<span class="rank-badge">Recent sale</span></span>' +
+          '<span class="rank-body" style="display:block"><span class="rank-who"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(tokenTitle(c.art)) + "</span></span>" +
+          '<span class="rank-meta" style="display:flex"><span><span class="rm-label" style="display:block">Sale price</span><span class="rm-value tnum">' + fmt(c.sale.priceLoop) + ' LOOP</span></span>' +
+          '<span style="text-align:right"><span class="rm-label" style="display:block">When</span><span class="rm-value">' + timeAgo(c.sale.timestamp) + "</span></span></span></span></button>";
+      }).join("");
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:30px">' +
+        '<h2 class="section-title" style="margin:0">' + (tab === "buyers" ? "Top Buyers" : "Top Sellers") + ' <span class="hint">Ranked by real on-chain volume · all time</span></h2>' +
+        '<span class="seg" role="group" aria-label="Buyers or sellers">' +
+        '<button data-rank-tab="buyers" class="' + (tab === "buyers" ? "active" : "") + '">Top Buyers</button>' +
+        '<button data-rank-tab="sellers" class="' + (tab === "sellers" ? "active" : "") + '">Top Sellers</button></span></div>' +
+        (cards.length ? '<div class="rank-scroll">' + cardsHtml + "</div>"
+          : '<div class="empty-note" style="margin-top:14px">No sales on-chain yet — buyers and sellers will be ranked here from real Sale events.</div>');
+    }
+    function bindRankCards(app) {
+      app.querySelectorAll(".rank-card[data-profile]").forEach(function (el) {
+        el.addEventListener("click", function () { location.hash = "#/profile/" + el.getAttribute("data-profile"); });
+      });
+      app.querySelectorAll(".rank-card[data-token]").forEach(function (el) {
+        el.addEventListener("click", function () { location.hash = "#/token/" + el.getAttribute("data-token"); });
+      });
+    }
+    function initHeroCarousel(count) {
+      var track = document.getElementById("hero-track");
+      if (!track || count === 0) return;
+      if (exploreState.heroTimer) { clearInterval(exploreState.heroTimer); exploreState.heroTimer = null; }
+      // Infinite loop: clone the first and last slides around the real ones.
+      var slides = Array.prototype.slice.call(track.children);
+      if (count > 1) {
+        var firstClone = slides[0].cloneNode(true);
+        var lastClone = slides[slides.length - 1].cloneNode(true);
+        firstClone.setAttribute("aria-hidden", "true");
+        lastClone.setAttribute("aria-hidden", "true");
+        track.appendChild(firstClone);
+        track.insertBefore(lastClone, slides[0]);
+      }
+      var idx = 0; // logical slide index
+      var pos = 1; // physical position (offset by the leading clone)
+      function apply(animate) {
+        track.style.transition = animate === false ? "none" : "";
+        track.style.transform = "translateX(-" + pos * 100 + "%)";
+        var dots = document.querySelectorAll("#hero-dots .car-dot");
+        dots.forEach(function (d, i) { d.classList.toggle("active", i === idx); });
+      }
+      function go(delta) {
+        if (count <= 1) return;
+        idx = (idx + delta + count) % count;
+        pos += delta;
+        apply(true);
+      }
+      // Start on the first real slide.
+      track.style.transition = "none";
+      track.style.transform = "translateX(-100%)";
+      if (count <= 1) { track.style.transform = "translateX(0)"; pos = 0; }
+      track.addEventListener("transitionend", function () {
+        if (count <= 1) return;
+        if (pos === 0) { pos = count; apply(false); }
+        else if (pos === count + 1) { pos = 1; apply(false); }
+      });
+      // Rebind cloned slides' click targets.
+      track.querySelectorAll("[data-token]").forEach(function (el) {
+        el.addEventListener("click", function () { location.hash = "#/token/" + el.getAttribute("data-token"); });
+      });
+      var prev = document.getElementById("hero-prev"), next = document.getElementById("hero-next");
+      if (prev) prev.addEventListener("click", function () { go(-1); restart(); });
+      if (next) next.addEventListener("click", function () { go(1); restart(); });
+      document.querySelectorAll("[data-hero-dot]").forEach(function (wrap) {
+        wrap.addEventListener("click", function () {
+          var target = Number(wrap.getAttribute("data-hero-dot"));
+          idx = target; pos = target + 1; apply(true); restart();
+        });
+      });
+      // Swipe support.
+      var startX = null;
+      var viewport = track.parentElement;
+      viewport.addEventListener("touchstart", function (e) { startX = e.touches[0].clientX; }, { passive: true });
+      viewport.addEventListener("touchend", function (e) {
+        if (startX === null) return;
+        var dx = e.changedTouches[0].clientX - startX;
+        if (Math.abs(dx) > 42) go(dx < 0 ? 1 : -1);
+        startX = null; restart();
+      }, { passive: true });
+      function restart() {
+        if (exploreState.heroTimer) clearInterval(exploreState.heroTimer);
+        if (count > 1 && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          exploreState.heroTimer = setInterval(function () {
+            if (document.hidden || !document.getElementById("hero-track")) { clearInterval(exploreState.heroTimer); exploreState.heroTimer = null; return; }
+            go(1);
+          }, 5200);
+        }
+      }
+      restart();
+      exploreState.heroIndex = 0;
+    }
+
+    /* ================= COLLECTION ================= */
+    function dailyVolumes(days) {
+      var out = [];
+      var now = new Date();
+      for (var i = days - 1; i >= 0; i--) {
+        var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        var next = new Date(d.getTime() + 86400000);
+        var vol = 0, count = 0;
+        S.salesAll.forEach(function (s) {
+          if (!s.timestamp) return;
+          var t = new Date(s.timestamp).getTime();
+          if (t >= d.getTime() && t < next.getTime()) { vol += s.priceLoop; count += 1; }
+        });
+        out.push({ day: d, volume: Math.round(vol * 1e8) / 1e8, count: count });
+      }
+      return out;
+    }
+    function sparklineSvg(values, w, h) {
+      if (!values.length) return '<span class="dim">—</span>';
+      var max = Math.max.apply(null, values.concat([0.00000001]));
+      var step = values.length > 1 ? w / (values.length - 1) : w;
+      var pts = values.map(function (v, i) {
+        var x = Math.round(i * step * 10) / 10;
+        var y = Math.round((h - 4 - (v / max) * (h - 10)) * 10) / 10;
+        return x + "," + y;
+      }).join(" ");
+      var up = values[values.length - 1] >= values[0];
+      return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + " " + h + '" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="' + (up ? "var(--green)" : "var(--red)") + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+    }
+    function collectionRowData() {
+      var vol1d = salesInWindow(24), vol7d = salesInWindow(24 * 7);
+      var sum = function (arr) { return Math.round(arr.reduce(function (a, s) { return a + s.priceLoop; }, 0) * 1e8) / 1e8; };
+      var topOffer = null;
+      S.tokens.forEach(function (t) {
+        if (t.offer && t.offer.active) topOffer = topOffer === null ? t.offer.amountLoop : Math.max(topOffer, t.offer.amountLoop);
+      });
+      var firstPrice = null, lastPrice = null;
+      var sorted = S.salesAll.slice().sort(function (a, b) { return (a.timestamp || "") < (b.timestamp || "") ? -1 : 1; });
+      var recent7 = vol7d.slice().sort(function (a, b) { return (a.timestamp || "") < (b.timestamp || "") ? -1 : 1; });
+      if (recent7.length) { firstPrice = recent7[0].priceLoop; lastPrice = recent7[recent7.length - 1].priceLoop; }
+      var change = firstPrice && lastPrice ? ((lastPrice - firstPrice) / firstPrice) * 100 : null;
+      return {
+        floor: S.totals.floorLoop, topOffer: topOffer,
+        vol1d: sum(vol1d), sales1d: vol1d.length, vol7d: sum(vol7d),
+        owners: S.totals.owners, supply: S.totals.minted, change7d: change,
+        spark: dailyVolumes(7).map(function (d) { return d.volume; })
+      };
+    }
+    function renderCollection(app) {
+      if (!S.loaded) { app.innerHTML = loadingHtml("Collections"); return; }
+      if (!S.online) { app.innerHTML = offlineHtml(); return; }
+      var d = collectionRowData();
+      var name = S.contracts.nftName;
+      var featured = heroSlides()[0];
+      var changeHtml = d.change7d === null ? '<span class="dim">—</span>'
+        : '<span class="' + (d.change7d >= 0 ? "pct-up" : "pct-down") + '">' + (d.change7d >= 0 ? "▲" : "▼") + " " + fmt(Math.abs(Math.round(d.change7d * 10) / 10)) + "%</span>";
+      var floorCell = d.floor !== null ? '<span class="tnum" style="font-weight:800">' + fmt(d.floor) + " LOOP</span>" : '<span class="dim">—</span>';
+      app.innerHTML =
+        '<div class="page"><h1 class="page-title">Collections</h1>' +
+        '<p class="page-sub">Every collection trading on Loop Market, read live from the chain. Tap a collection to open its profile.</p>' +
+        '<div class="tbl-wrap"><div class="tbl-scroll"><table class="tbl"><thead><tr>' +
+        "<th>Collection</th><th>Floor price</th><th>Last 7d</th><th>Top offer</th><th>1d vol</th><th>1d sales</th><th>Owners</th><th>Supply</th>" +
+        '</tr></thead><tbody><tr class="clickable" id="coll-row">' +
+        '<td><span class="tbl-item">' + (featured ? tokenImgHtml(featured.token) : "") + '<span><span style="font-weight:800">' + esc(name) + "</span>" + VERIFIED_SVG + '<span class="small dim" style="display:block">' + esc(S.contracts.nftSymbol) + " · ERC-721</span></span></span></td>" +
+        "<td>" + floorCell + "</td>" +
+        "<td>" + sparklineSvg(d.spark, 96, 30) + '<div class="small">' + changeHtml + "</div></td>" +
+        '<td class="tnum">' + (d.topOffer !== null ? fmt(d.topOffer) + " LOOP" : "—") + "</td>" +
+        '<td class="tnum">' + (d.sales1d ? fmt(d.vol1d) + " LOOP" : "—") + "</td>" +
+        '<td class="tnum">' + (d.sales1d ? d.sales1d : "—") + "</td>" +
+        '<td class="tnum">' + d.owners + "</td>" +
+        '<td class="tnum">' + d.supply + "</td>" +
+        "</tr></tbody></table></div></div>" +
+        '<div class="card" style="margin-top:14px;padding:16px;display:none" id="coll-card-mobile"></div>' +
+        statusLineHtml() + "</div>";
+      var go = function () { location.hash = "#/collection-profile"; };
+      document.getElementById("coll-row").addEventListener("click", go);
+      // On narrow screens the table scrolls inside its own frame; also offer
+      // a tappable summary card so the collection is one tap away.
+      var mob = document.getElementById("coll-card-mobile");
+      if (window.innerWidth < 700) {
+        mob.style.display = "block";
+        mob.innerHTML = '<div style="font-weight:800">' + esc(name) + VERIFIED_SVG + '</div><div class="small dim" style="margin-top:4px">Floor ' +
+          (d.floor !== null ? fmt(d.floor) + " LOOP" : "—") + " · Owners " + d.owners + " · Supply " + d.supply + '</div>' +
+          '<button class="btn btn-primary btn-sm" style="margin-top:12px">Open collection</button>';
+        mob.querySelector("button").addEventListener("click", go);
+      }
+    }
+    function renderCollectionProfile(app) {
+      if (!S.loaded) { app.innerHTML = loadingHtml("Collection"); return; }
+      if (!S.online) { app.innerHTML = offlineHtml(); return; }
+      var name = S.contracts.nftName;
+      var slides = heroSlides();
+      var bannerTok = slides.length ? slides[0].token : (S.tokens[0] || null);
+      var listed = S.tokens.filter(function (t) { return t.listing && t.listing.active; }).length;
+      app.innerHTML =
+        '<div class="page">' +
+        '<div class="coll-banner">' + (bannerTok ? tokenImgHtml(bannerTok) : "") + '<span class="shade"></span></div>' +
+        '<div class="coll-head"><span class="coll-avatar">' + (bannerTok ? tokenImgHtml(bannerTok) : "") + '</span>' +
+        '<div style="padding-bottom:4px"><div style="font-size:26px;font-weight:800;letter-spacing:-0.01em">' + esc(name) + VERIFIED_SVG + "</div>" +
+        '<div class="small dim">By ' + addrLink(S.contracts.nftOwner) + " · ERC-721 · " + esc(S.contracts.nftSymbol) + "</div></div></div>" +
+        '<div class="coll-stats">' +
+        '<span><span class="cs-label" style="display:block">Items</span><span class="cs-value tnum" style="display:block">' + S.totals.minted + "</span></span>" +
+        '<span><span class="cs-label" style="display:block">Owners</span><span class="cs-value tnum" style="display:block">' + S.totals.owners + "</span></span>" +
+        '<span><span class="cs-label" style="display:block">Listed</span><span class="cs-value tnum" style="display:block">' + listed + "</span></span>" +
+        '<span><span class="cs-label" style="display:block">Floor price</span><span class="cs-value tnum" style="display:block">' + (S.totals.floorLoop !== null ? fmt(S.totals.floorLoop) + " LOOP" : "—") + "</span></span>" +
+        '<span><span class="cs-label" style="display:block">Sales</span><span class="cs-value tnum" style="display:block">' + S.totals.salesCount + "</span></span>" +
+        '<span><span class="cs-label" style="display:block">Total volume</span><span class="cs-value tnum" style="display:block">' + fmt(S.totals.volumeLoop) + " LOOP</span></span>" +
+        "</div>" +
+        '<p class="small dim" style="margin-top:14px;max-width:680px">The shared ERC-721 collection of Loop Market. Every token below is read live from the contract — ownership, listings, offers and royalties are exactly what the chain reports.</p>' +
+        '<h2 class="section-title">Items <span class="hint">' + S.tokens.length + " minted</span></h2>" +
+        (S.tokens.length ? '<div class="nft-grid">' + S.tokens.map(tokenCardHtml).join("") + "</div>" : '<div class="empty-note">No tokens minted yet.</div>') +
+        '<div class="divider"></div>' +
+        '<div class="small dim">Contract <span class="addr">' + NFT_CONTRACT + '</span> · <a href="' + EXPLORER_URL + "/address/" + NFT_CONTRACT + '" target="_blank" rel="noopener">View on the explorer ↗</a></div>' +
+        "</div>";
+      bindTokenCards(app);
+    }
+  </script>
+
+    <script>
+    /* ================= ACTIVITY ================= */
+    var activityState = { filter: "all" };
+    var EV_META = {
+      "sale": { label: "Sale", icon: '<path d="M4 7h13l-1.5 8.5a2 2 0 0 1-2 1.5h-7a2 2 0 0 1-2-1.6L2.6 3.9A1 1 0 0 0 1.6 3H1" transform="translate(1.5 1) scale(.92)"/><circle cx="9" cy="21" r="1.4"/><circle cx="17" cy="21" r="1.4"/>' },
+      "offer-accepted": { label: "Offer accepted", icon: '<path d="m4.5 12.5 5 5 10-11"/>' },
+      "listed": { label: "Listed", icon: '<path d="M4 6h16M4 12h16M4 18h10"/>' },
+      "listing-cancelled": { label: "Listing cancelled", icon: '<path d="M18 6 6 18M6 6l12 12"/>' },
+      "offer-made": { label: "Offer made", icon: '<path d="M12 3v18M7 8c0-2 2.2-3 5-3s5 1 5 3-2 2.8-5 3.4S7 13 7 15.5 9.2 19 12 19s5-1.2 5-3"/>' },
+      "offer-withdrawn": { label: "Offer withdrawn", icon: '<path d="M9 14 4 9l5-5"/><path d="M4 9h9a7 7 0 0 1 0 14h-3"/>' },
+      "mint": { label: "Minted", icon: '<path d="M12 3v18M5 8l7-5 7 5"/>' },
+      "transfer": { label: "Transfer", icon: '<path d="M4 7h13m0 0-3.5-3.5M17 7l-3.5 3.5M20 17H7m0 0 3.5 3.5M7 17l3.5-3.5"/>' }
+    };
+    function evIcon(kind) {
+      var meta = EV_META[kind] || EV_META.transfer;
+      return '<span class="ev-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + meta.icon + "</svg></span>";
+    }
+    function evLabel(kind) { return (EV_META[kind] || {}).label || kind; }
+    function filteredEvents() {
+      var f = activityState.filter;
+      if (f === "all") return S.events;
+      if (f === "sales") return S.events.filter(function (e) { return e.kind === "sale" || e.kind === "offer-accepted"; });
+      if (f === "listings") return S.events.filter(function (e) { return e.kind === "listed" || e.kind === "listing-cancelled"; });
+      if (f === "offers") return S.events.filter(function (e) { return e.kind === "offer-made" || e.kind === "offer-withdrawn" || e.kind === "offer-accepted"; });
+      if (f === "mints") return S.events.filter(function (e) { return e.kind === "mint"; });
+      if (f === "transfers") return S.events.filter(function (e) { return e.kind === "transfer"; });
+      return S.events;
+    }
+    function saleDetailHtml(e) {
+      var parts = [];
+      if (e.kind === "sale") {
+        parts.push("<span>Marketplace fee (2.5%) <b>" + fmt(e.feeLoop) + " LOOP</b></span>");
+        parts.push("<span>Creator royalty <b>" + fmt(e.royaltyLoop) + " LOOP</b>" + (e.royaltyReceiver ? " to " + shortAddr(e.royaltyReceiver) : "") + "</span>");
+        if (e.priceLoop !== null && e.feeLoop !== null && e.royaltyLoop !== null) {
+          parts.push("<span>Seller received <b>" + fmt(Math.round((e.priceLoop - e.feeLoop - e.royaltyLoop) * 1e8) / 1e8) + " LOOP</b></span>");
+        }
+      }
+      parts.push('<span>Block <b>' + e.blockNumber.toLocaleString("en-US") + "</b></span>");
+      parts.push('<span>Tx <a href="' + e.explorerUrl + '" target="_blank" rel="noopener">' + e.txHash.slice(0, 10) + "…" + e.txHash.slice(-6) + " ↗</a></span>");
+      if (e.timestamp) parts.push("<span>" + fullDate(e.timestamp) + "</span>");
+      return '<span class="detail-grid">' + parts.join("") + "</span>";
+    }
+    function activityRowsHtml(events) {
+      return events.map(function (e, i) {
+        var t = S.tokenById.get(e.tokenId);
+        var rank = S.rarity.get(e.tokenId);
+        var name = t ? tokenTitle(t) : "LMNFT #" + e.tokenId;
+        return '<tr class="clickable" data-act-row="' + i + '">' +
+          '<td><span class="ev-kind">' + evIcon(e.kind) + evLabel(e.kind) + "</span></td>" +
+          '<td><span class="tbl-item">' + (t ? tokenImgHtml(t) : '<span class="mini-ph">#' + e.tokenId + "</span>") +
+          '<span><span style="font-weight:700">' + esc(name) + '</span><span class="small dim" style="display:block">' + esc(S.contracts.nftName) + " ✓</span></span></span></td>" +
+          '<td class="tnum" style="font-weight:700">' + (e.priceLoop !== null ? fmt(e.priceLoop) + " LOOP" : "—") + "</td>" +
+          '<td class="tnum">1</td>' +
+          "<td>" + (rank ? "#" + rank : "—") + "</td>" +
+          "<td>" + (e.from ? addrWithAvatar(e.from, 22) : "—") + "</td>" +
+          "<td>" + (e.to ? addrWithAvatar(e.to, 22) : "—") + "</td>" +
+          '<td style="white-space:nowrap"><span title="' + esc(fullDate(e.timestamp)) + '">' + timeAgo(e.timestamp) + '</span> <a href="' + e.explorerUrl + '" target="_blank" rel="noopener" title="View transaction on the explorer">↗</a></td></tr>' +
+          '<tr class="detail-row" data-act-detail="' + i + '" style="display:none"><td colspan="8">' + saleDetailHtml(e) + "</td></tr>";
+      }).join("");
+    }
+    function activityCardsHtml(events) {
+      return events.map(function (e, i) {
+        var t = S.tokenById.get(e.tokenId);
+        var rank = S.rarity.get(e.tokenId);
+        var name = t ? tokenTitle(t) : "LMNFT #" + e.tokenId;
+        return '<div class="act-card" data-act-card="' + i + '">' +
+          '<div class="act-card-top">' + (t ? tokenImgHtml(t) : '<span class="mini-ph">#' + e.tokenId + "</span>") +
+          '<div style="min-width:0;flex:1"><div style="font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(name) + "</div>" +
+          '<div class="small dim">' + esc(S.contracts.nftName) + " · #" + e.tokenId + "</div></div>" +
+          '<span class="ev-kind">' + evIcon(e.kind) + "</span></div>" +
+          '<div class="act-lines">' +
+          '<span><span class="al-label">Event</span>' + evLabel(e.kind) + "</span>" +
+          '<span><span class="al-label">Price</span><span class="tnum" style="font-weight:700">' + (e.priceLoop !== null ? fmt(e.priceLoop) + " LOOP" : "—") + "</span></span>" +
+          '<span><span class="al-label">From</span>' + (e.from ? addrLink(e.from) : "—") + "</span>" +
+          '<span><span class="al-label">To</span>' + (e.to ? addrLink(e.to) : "—") + "</span>" +
+          '<span><span class="al-label">Qty · Rarity</span>1' + (rank ? " · #" + rank : "") + "</span>" +
+          '<span><span class="al-label">Time</span>' + timeAgo(e.timestamp) + ' · <a href="' + e.explorerUrl + '" target="_blank" rel="noopener">tx ↗</a></span>' +
+          "</div>" +
+          (e.kind === "sale" ? '<button class="text-btn" data-act-toggle="' + i + '">Fee &amp; royalty detail</button><div class="act-detail">' + saleDetailHtml(e) + "</div>" : "") +
+          "</div>";
+      }).join("");
+    }
+    function renderActivity(app) {
+      if (!S.loaded) { app.innerHTML = loadingHtml("Activity"); return; }
+      if (!S.online) { app.innerHTML = offlineHtml(); return; }
+      var events = filteredEvents();
+      var chips = [["all", "All"], ["sales", "Sales"], ["listings", "Listings"], ["offers", "Offers"], ["mints", "Mints"], ["transfers", "Transfers"]];
+      app.innerHTML =
+        '<div class="page"><h1 class="page-title">Activity</h1>' +
+        '<p class="page-sub">Every mint, listing, offer and sale on the LoopMarketplace contract, read live from event logs — each with its real transaction hash.</p>' +
+        '<div class="chip-row">' + chips.map(function (c) {
+          return '<button class="chip' + (activityState.filter === c[0] ? " active" : "") + '" data-act-filter="' + c[0] + '">' + c[1] + "</button>";
+        }).join("") +
+        (activityState.filter !== "all" ? '<button class="chip" data-act-filter="all">✕ Clear</button>' : "") + "</div>" +
+        (events.length ?
+          '<div class="tbl-wrap act-table-wrap"><div class="tbl-scroll"><table class="tbl"><thead><tr><th>Event</th><th>Item</th><th>Price</th><th>Qty</th><th>Rarity</th><th>From</th><th>To</th><th>Time</th></tr></thead><tbody>' +
+          activityRowsHtml(events) + "</tbody></table></div></div>" +
+          '<div class="act-cards">' + activityCardsHtml(events) + "</div>"
+          : '<div class="empty-note">No events in this filter yet — new on-chain activity appears here the moment it confirms.</div>') +
+        '<p class="small dim" style="margin-top:12px">Showing the latest ' + events.length + ' events. Tap a row for the fee and royalty split.</p>' +
+        statusLineHtml() + "</div>";
+      app.querySelectorAll("[data-act-filter]").forEach(function (b) {
+        b.addEventListener("click", function () { activityState.filter = b.getAttribute("data-act-filter"); rerender(); });
+      });
+      app.querySelectorAll("[data-act-row]").forEach(function (row) {
+        row.addEventListener("click", function (ev) {
+          if (ev.target.closest("a") || ev.target.closest("[data-profile]")) return;
+          var detail = app.querySelector('[data-act-detail="' + row.getAttribute("data-act-row") + '"]');
+          if (detail) detail.style.display = detail.style.display === "none" ? "" : "none";
+        });
+      });
+      app.querySelectorAll("[data-act-toggle]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var card = b.closest(".act-card");
+          if (card) card.classList.toggle("open");
+        });
+      });
+      bindTokenCards(app);
+    }
+
+    /* ================= STATISTICS ================= */
+    var statsState = { window: 7 };
+    function renderStatistics(app) {
+      if (!S.loaded) { app.innerHTML = loadingHtml("Statistics"); return; }
+      if (!S.online) { app.innerHTML = offlineHtml(); return; }
+      var t = S.totals;
+      var avg = t.salesCount ? Math.round((t.volumeLoop / t.salesCount) * 1e8) / 1e8 : null;
+      var win = statsState.window === 1 ? salesInWindow(24) : salesInWindow(24 * 7);
+      var winVol = Math.round(win.reduce(function (a, s) { return a + s.priceLoop; }, 0) * 1e8) / 1e8;
+      var days = dailyVolumes(7);
+      var maxDay = Math.max.apply(null, days.map(function (d) { return d.volume; }).concat([0.00000001]));
+      var sellers = rankAccounts("seller", 0).slice(0, 10);
+      var buyers = rankAccounts("buyer", 0).slice(0, 10);
+      var recent = S.salesAll.slice(0, 10);
+      var coll = collectionRowData();
+      function accountRows(list, role) {
+        if (!list.length) return '<div class="empty-note" style="padding:20px">No sales yet.</div>';
+        return '<div class="list-rows">' + list.map(function (e, i) {
+          return '<div class="list-row"><span style="font-weight:800;color:var(--dim-2);width:22px">#' + (i + 1) + "</span>" + avatarImg(e.address, 32) +
+            '<span class="lr-main"><span class="lr-title">' + addrLink(e.address) + '</span><span class="lr-sub">' + e.trades + (e.trades === 1 ? " trade" : " trades") + '</span></span>' +
+            '<span class="lr-value tnum">' + fmt(e.volume) + ' LOOP</span></div>';
+        }).join("") + "</div>";
+      }
+      app.innerHTML =
+        '<div class="page"><h1 class="page-title">Statistics</h1>' +
+        '<p class="page-sub">The full picture of the marketplace, computed live from the LoopMarketNFT and LoopMarketplace contracts — nothing here is cached or estimated.</p>' +
+        '<div class="stat-grid">' +
+        '<div class="stat-card"><div class="sc-label">Total minted</div><div class="sc-value tnum">' + t.minted + '</div><div class="sc-sub">Tokens on-chain</div></div>' +
+        '<div class="stat-card"><div class="sc-label">Listed now</div><div class="sc-value tnum">' + t.activeListings + '</div><div class="sc-sub">Active listings</div></div>' +
+        '<div class="stat-card"><div class="sc-label">Floor price</div><div class="sc-value tnum">' + (t.floorLoop !== null ? fmt(t.floorLoop) : "—") + '</div><div class="sc-sub">' + (t.floorLoop !== null ? "LOOP · cheapest listing" : "No active listings") + "</div></div>" +
+        '<div class="stat-card"><div class="sc-label">Total volume</div><div class="sc-value tnum">' + fmt(t.volumeLoop) + '</div><div class="sc-sub">LOOP · all sales</div></div>' +
+        '<div class="stat-card"><div class="sc-label">Total sales</div><div class="sc-value tnum">' + t.salesCount + '</div><div class="sc-sub">Sale events on-chain</div></div>' +
+        '<div class="stat-card"><div class="sc-label">Holders</div><div class="sc-value tnum">' + t.owners + '</div><div class="sc-sub">Wallets holding LMNFT</div></div>' +
+        '<div class="stat-card"><div class="sc-label">Average sale price</div><div class="sc-value tnum">' + (avg !== null ? fmt(avg) : "—") + '</div><div class="sc-sub">' + (avg !== null ? "LOOP per sale" : "No sales yet") + "</div></div>" +
+        '<div class="stat-card"><div class="sc-label">Active offers</div><div class="sc-value tnum">' + t.activeOffers + '</div><div class="sc-sub">Escrowed in the contract</div></div>' +
+        "</div>" +
+        '<div class="panel" style="margin-top:16px"><div class="panel-head"><h3>Trading activity</h3>' +
+        '<span class="seg"><button data-stats-win="1" class="' + (statsState.window === 1 ? "active" : "") + '">1D</button><button data-stats-win="7" class="' + (statsState.window === 7 ? "active" : "") + '">7D</button></span></div>' +
+        '<div style="display:flex;gap:34px;flex-wrap:wrap"><span><span class="small dim" style="display:block">Volume (' + (statsState.window === 1 ? "24h" : "7d") + ')</span><b class="tnum" style="font-size:20px">' + fmt(winVol) + ' LOOP</b></span>' +
+        '<span><span class="small dim" style="display:block">Sales (' + (statsState.window === 1 ? "24h" : "7d") + ')</span><b class="tnum" style="font-size:20px">' + win.length + "</b></span></div>" +
+        '<div class="bar-chart">' + days.map(function (d) {
+          var h = Math.max(3, Math.round((d.volume / maxDay) * 92));
+          var lab = d.day.toLocaleDateString("en-US", { weekday: "short" });
+          return '<div class="bar-col"><span class="bar-val tnum">' + (d.volume ? fmt(d.volume) : "") + '</span><span class="bar" style="height:' + h + 'px" title="' + fmt(d.volume) + ' LOOP · ' + d.count + ' sales"></span><span class="bar-lab">' + lab + "</span></div>";
+        }).join("") + "</div>" +
+        '<p class="small dim" style="margin:4px 0 0">Daily sale volume, last 7 days (LOOP).</p></div>' +
+        '<div class="two-col">' +
+        '<div class="panel"><div class="panel-head"><h3>Top collections</h3></div>' +
+        '<div class="list-rows"><div class="list-row">' + (heroSlides().length ? tokenImgHtml(heroSlides()[0].token) : "") +
+        '<span class="lr-main"><span class="lr-title">' + esc(S.contracts.nftName) + VERIFIED_SVG + '</span><span class="lr-sub">Floor ' + (coll.floor !== null ? fmt(coll.floor) + " LOOP" : "—") + " · " + coll.supply + ' items · ' + coll.owners + ' owners</span></span>' +
+        '<span class="lr-value tnum">' + fmt(t.volumeLoop) + ' LOOP<span class="lr-sub">total volume</span></span></div></div></div>' +
+        '<div class="panel"><div class="panel-head"><h3>Top holders</h3></div>' +
+        (S.holders.length ? '<div class="list-rows">' + S.holders.slice(0, 10).map(function (h, i) {
+          return '<div class="list-row"><span style="font-weight:800;color:var(--dim-2);width:22px">#' + (i + 1) + "</span>" + avatarImg(h.address, 32) +
+            '<span class="lr-main"><span class="lr-title">' + addrLink(h.address) + '</span><span class="lr-sub">' + h.listedCount + ' listed</span></span>' +
+            '<span class="lr-value tnum">' + h.tokenCount + (h.tokenCount === 1 ? " NFT" : " NFTs") + "</span></div>";
+        }).join("") + "</div>" : '<div class="empty-note" style="padding:20px">No holders yet.</div>') +
+        "</div></div>" +
+        '<div class="two-col">' +
+        '<div class="panel"><div class="panel-head"><h3>Top sellers</h3><span class="small dim">by volume</span></div>' + accountRows(sellers, "seller") + "</div>" +
+        '<div class="panel"><div class="panel-head"><h3>Top buyers</h3><span class="small dim">by volume</span></div>' + accountRows(buyers, "buyer") + "</div>" +
+        "</div>" +
+        '<h2 class="section-title">Recent sales <span class="hint">Newest first · real transaction hashes</span></h2>' +
+        (recent.length ? '<div class="panel" style="padding:6px 18px"><div class="list-rows">' + recent.map(function (s) {
+          var tk = S.tokenById.get(s.tokenId);
+          return '<div class="list-row">' + (tk ? tokenImgHtml(tk) : '<span class="mini-ph">#' + s.tokenId + "</span>") +
+            '<span class="lr-main"><span class="lr-title">' + (tk ? esc(tokenTitle(tk)) : "LMNFT #" + s.tokenId) + '</span><span class="lr-sub">' + addrLink(s.seller) + " → " + addrLink(s.buyer) + (s.viaOffer ? " · via offer" : "") + '</span></span>' +
+            '<span class="lr-value tnum">' + fmt(s.priceLoop) + ' LOOP<span class="lr-sub">' + timeAgo(s.timestamp) + ' · <a href="' + EXPLORER_URL + "/tx/" + s.txHash + '" target="_blank" rel="noopener">tx ↗</a></span></span></div>';
+        }).join("") + "</div></div>" : '<div class="empty-note">No sales on-chain yet.</div>') +
+        statusLineHtml() + "</div>";
+      app.querySelectorAll("[data-stats-win]").forEach(function (b) {
+        b.addEventListener("click", function () { statsState.window = Number(b.getAttribute("data-stats-win")); rerender(); });
+      });
+      bindTokenCards(app);
+    }
+  </script>
+
+    <script>
+    /* ================= TOKEN DETAIL ================= */
+    function renderToken(app, tokenId) {
+      if (!S.loaded) { app.innerHTML = loadingHtml("NFT #" + tokenId); return; }
+      if (!S.online) { app.innerHTML = offlineHtml(); return; }
+      var t = S.tokenById.get(tokenId);
+      if (!t) {
+        app.innerHTML = '<div class="page"><h1 class="page-title">Token #' + tokenId + ' not found</h1><div class="empty-note" style="margin-top:14px">The chain reports no token with this ID in the Loop Market NFT contract. It may not have been minted yet.</div><p style="margin-top:16px"><a class="btn btn-ghost" href="#/explore">Back to Explore</a></p></div>';
+        return;
+      }
+      var me = W.address;
+      var isOwner = me && t.owner.toLowerCase() === me;
+      var isSeller = t.listing && t.listing.active && me && t.listing.seller.toLowerCase() === me;
+      var myOffer = t.offer && t.offer.active && me && t.offer.offerer.toLowerCase() === me;
+      var rank = S.rarity.get(t.tokenId);
+      var history = S.events.filter(function (e) { return e.tokenId === t.tokenId; });
+      var sales = S.salesAll.filter(function (s) { return s.tokenId === t.tokenId; });
+      var lastSale = sales.length ? sales[0] : null;
+      var busy = W.busy ? ' disabled title="A transaction is in progress"' : "";
+      var actionBox = "";
+      if (t.listing && t.listing.active) {
+        actionBox += '<div class="price-box"><div class="small dim" style="font-weight:800;letter-spacing:.06em">CURRENT PRICE</div>' +
+          '<div class="price-big tnum">' + fmt(t.listing.priceLoop) + ' <span style="font-size:17px">LOOP</span></div>' +
+          '<div class="small dim">Seller ' + addrLink(t.listing.seller) + " · Marketplace fee 2.5% and the creator royalty are deducted from the seller — you pay the price plus gas.</div>";
+        if (isSeller) {
+          actionBox += '<div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="btn btn-danger" id="tx-cancel"' + busy + ">Cancel listing</button></div>";
+        } else if (isOwner) {
+          actionBox += '<p class="small dim" style="margin-top:12px">You own this token, but the active listing belongs to a previous owner — it no longer settles against your wallet. Cancel is only possible from the seller wallet.</p>';
+        } else {
+          actionBox += '<div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="btn btn-primary" id="tx-buy"' + busy + ">" + (me ? "Buy now" : "Connect wallet to buy") + "</button></div>";
+        }
+        actionBox += "</div>";
+      } else if (isOwner) {
+        actionBox += '<div class="price-box"><div style="font-weight:800;font-size:16px">List this NFT for sale</div>' +
+          '<p class="small dim">The NFT stays in your wallet until it sells. The marketplace contract takes 2.5% and the creator royalty ' + fmt(t.royaltyPercent) + '% from your proceeds.</p>' +
+          '<div class="inline-form"><input class="input" id="list-price" inputmode="decimal" placeholder="Price in LOOP, e.g. 0.25" aria-label="Listing price in LOOP" />' +
+          '<button class="btn btn-primary" id="tx-list"' + busy + ">List for sale</button></div></div>";
+      } else {
+        actionBox += '<div class="price-box"><div style="font-weight:800;font-size:16px">Not listed</div><p class="small dim" style="margin:6px 0 0">This token is not for sale at a fixed price. You can still make an offer below — the owner can accept it at any time.</p></div>';
+      }
+      // Offer box
+      var offerBox = '<div class="price-box"><div style="font-weight:800;font-size:16px">Offers</div>';
+      if (t.offer && t.offer.active) {
+        offerBox += '<div class="kv"><span class="k">Open offer</span><span class="v tnum">' + fmt(t.offer.amountLoop) + " LOOP</span></div>" +
+          '<div class="kv"><span class="k">From</span><span class="v">' + addrLink(t.offer.offerer) + "</span></div>" +
+          '<p class="small dim">The full amount is escrowed in the marketplace contract. Only one offer can be open per token.</p>';
+        if (isOwner) offerBox += '<button class="btn btn-primary" id="tx-accept"' + busy + ">Accept offer</button> ";
+        if (myOffer) offerBox += '<button class="btn btn-ghost" id="tx-withdraw"' + busy + ">Withdraw my offer</button>";
+      } else {
+        offerBox += '<p class="small dim">No open offer on this token.</p>';
+        if (!isOwner) {
+          offerBox += '<div class="inline-form"><input class="input" id="offer-amount" inputmode="decimal" placeholder="Offer in LOOP, e.g. 0.05" aria-label="Offer amount in LOOP" />' +
+            '<button class="btn btn-primary" id="tx-offer"' + busy + ">" + (me ? "Make offer" : "Connect wallet to offer") + "</button></div>" +
+            '<p class="small dim" style="margin-top:8px">Your LOOP is escrowed in the contract until you withdraw the offer or the owner accepts it.</p>';
+        } else {
+          offerBox += '<p class="small dim">You own this token — offers from other wallets will appear here.</p>';
+        }
+      }
+      offerBox += "</div>";
+      app.innerHTML =
+        '<div class="page">' +
+        '<p class="small" style="margin:0 0 14px"><a href="#/collection-profile">' + esc(S.contracts.nftName) + "</a> <span class='dim'>/</span> <span class='dim'>#" + t.tokenId + "</span></p>" +
+        '<div class="token-layout"><div><div class="token-media">' + tokenImgHtml(t) + "</div>" +
+        '<div class="panel" style="margin-top:16px"><h3>Details</h3>' +
+        '<div class="kv"><span class="k">Contract</span><span class="v addr">' + shortAddr(NFT_CONTRACT) + ' <button class="copy-btn" data-copy="' + NFT_CONTRACT + '">Copy</button></span></div>' +
+        '<div class="kv"><span class="k">Token ID</span><span class="v">#' + t.tokenId + "</span></div>" +
+        '<div class="kv"><span class="k">Standard</span><span class="v">ERC-721 · ERC-2981 royalties</span></div>' +
+        '<div class="kv"><span class="k">Creator royalty</span><span class="v">' + fmt(t.royaltyPercent) + "% → " + shortAddr(t.royaltyReceiver) + "</span></div>" +
+        '<div class="kv"><span class="k">Metadata</span><span class="v">' + (t.metadataStatus === "resolved" ? "Resolved" : "Not published / unreachable") + "</span></div>" +
+        '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-ghost btn-sm" href="' + EXPLORER_URL + "/token/" + NFT_CONTRACT + "/" + t.tokenId + '" target="_blank" rel="noopener">View on explorer ↗</a>' +
+        (t.externalUrl ? '<a class="btn btn-ghost btn-sm" href="' + esc(t.externalUrl) + '" target="_blank" rel="noopener">Creator link ↗</a>' : "") + "</div></div></div>" +
+        '<div><h1 class="page-title" style="margin-top:0">' + esc(tokenTitle(t)) + VERIFIED_SVG + "</h1>" +
+        '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="small dim">Owned by</span>' + addrWithAvatar(t.owner, 26) +
+        (rank ? '<span class="rarity-chip">Rarity rank #' + rank + " of " + S.rarity.size + "</span>" : "") +
+        (lastSale ? '<span class="rarity-chip">Last sale ' + fmt(lastSale.priceLoop) + " LOOP</span>" : "") + "</div>" +
+        (t.description ? '<p style="margin-top:14px;max-width:640px">' + esc(t.description) + "</p>" : "") +
+        actionBox + offerBox +
+        (t.traits.length ? '<h2 class="section-title" style="font-size:18px">Traits</h2><div class="trait-grid">' + t.traits.map(function (tr) {
+          var f = S.traitFreq ? S.traitFreq.get(tr.label + ":" + tr.value) || 0 : 0;
+          var pct = S.totals.minted ? Math.round((f / S.totals.minted) * 1000) / 10 : 0;
+          return '<div class="trait"><div class="t-label">' + esc(tr.label) + '</div><div class="t-value">' + esc(tr.value) + '</div><div class="t-freq">' + f + " of " + S.totals.minted + " · " + pct + "%</div></div>";
+        }).join("") + "</div>" : "") +
+        '<h2 class="section-title" style="font-size:18px">History</h2>' +
+        (history.length ? '<div class="panel" style="padding:6px 18px"><div class="list-rows">' + history.map(function (e) {
+          return '<div class="list-row"><span class="ev-kind">' + evIcon(e.kind) + '</span><span class="lr-main"><span class="lr-title">' + evLabel(e.kind) + '</span><span class="lr-sub">' +
+            (e.from ? addrLink(e.from) : "") + (e.to ? " → " + addrLink(e.to) : "") + '</span></span>' +
+            '<span class="lr-value tnum">' + (e.priceLoop !== null ? fmt(e.priceLoop) + " LOOP" : "—") + '<span class="lr-sub">' + timeAgo(e.timestamp) + ' · <a href="' + e.explorerUrl + '" target="_blank" rel="noopener">tx ↗</a></span></span></div>';
+        }).join("") + "</div></div>" : '<div class="empty-note">No on-chain events for this token yet.</div>') +
+        "</div></div></div>";
+      bindTokenCards(app);
+      app.querySelectorAll("[data-copy]").forEach(function (b) {
+        b.addEventListener("click", function () { copyText(b.getAttribute("data-copy"), "Address"); });
+      });
+      var buy = document.getElementById("tx-buy");
+      if (buy) buy.addEventListener("click", function () { if (!W.address) { connectWallet(); return; } txBuy(t); });
+      var cancel = document.getElementById("tx-cancel");
+      if (cancel) cancel.addEventListener("click", function () { txCancelListing(t); });
+      var list = document.getElementById("tx-list");
+      if (list) list.addEventListener("click", function () { txList(t, document.getElementById("list-price").value); });
+      var offer = document.getElementById("tx-offer");
+      if (offer) offer.addEventListener("click", function () { if (!W.address) { connectWallet(); return; } txMakeOffer(t, document.getElementById("offer-amount").value); });
+      var accept = document.getElementById("tx-accept");
+      if (accept) accept.addEventListener("click", function () { txAcceptOffer(t); });
+      var withdraw = document.getElementById("tx-withdraw");
+      if (withdraw) withdraw.addEventListener("click", function () { txWithdrawOffer(t); });
+    }
+
+    /* ================= PROFILE ================= */
+    function renderProfile(app, address) {
+      if (!S.loaded) { app.innerHTML = loadingHtml("Profile"); return; }
+      if (!S.online) { app.innerHTML = offlineHtml(); return; }
+      address = (address || "").toLowerCase();
+      if (!/^0x[0-9a-f]{40}$/.test(address)) {
+        app.innerHTML = '<div class="page"><h1 class="page-title">Profile not found</h1><div class="empty-note" style="margin-top:14px">That is not a valid Loop Network address.</div></div>';
+        return;
+      }
+      var isSelf = W.address && W.address === address;
+      var owned = S.tokens.filter(function (t) { return t.owner.toLowerCase() === address; });
+      var floor = S.totals.floorLoop;
+      var portfolio = owned.reduce(function (sum, t) {
+        if (t.listing && t.listing.active) return sum + t.listing.priceLoop;
+        return sum + (floor || 0);
+      }, 0);
+      var myEvents = S.events.filter(function (e) {
+        return (e.from && e.from.toLowerCase() === address) || (e.to && e.to.toLowerCase() === address);
+      });
+      var mySales = S.salesAll.filter(function (s) { return s.seller === address || s.buyer === address; });
+      var volTraded = mySales.reduce(function (a, s) { return a + s.priceLoop; }, 0);
+      var offersMade = S.tokens.filter(function (t) { return t.offer && t.offer.active && t.offer.offerer.toLowerCase() === address; });
+      var hues = [213, 265, 18, 152, 340, 199];
+      var hue = hues[parseInt(address.slice(2, 4), 16) % hues.length];
+      var bannerBg = "linear-gradient(120deg, hsl(" + hue + " 55% 16%) 0%, hsl(" + ((hue + 40) % 360) + " 60% 30%) 55%, hsl(" + ((hue + 90) % 360) + " 55% 20%) 100%)";
+      var tab = app.getAttribute("data-profile-tab") || "holdings";
+      app.innerHTML =
+        '<div class="page" style="padding-top:0">' +
+        '<div class="profile-banner" style="background:' + bannerBg + ';margin:0 -20px"></div>' +
+        '<div class="profile-head"><span class="profile-avatar"><img src="' + identicon(address) + '" alt="" /></span>' +
+        '<div style="padding-bottom:2px;min-width:0"><div style="font-size:24px;font-weight:800" class="addr">' + shortAddr(address) + (isSelf ? ' <span class="rarity-chip">You</span>' : "") + "</div>" +
+        '<div class="small dim addr">' + address + ' <button class="copy-btn" data-copy="' + address + '">Copy</button></div></div></div>' +
+        '<div class="coll-stats">' +
+        '<span><span class="cs-label" style="display:block">Portfolio value</span><span class="cs-value tnum" style="display:block">' + fmt(Math.round(portfolio * 1e8) / 1e8) + ' LOOP</span></span>' +
+        '<span><span class="cs-label" style="display:block">NFTs owned</span><span class="cs-value tnum" style="display:block">' + owned.length + "</span></span>" +
+        '<span><span class="cs-label" style="display:block">Volume traded</span><span class="cs-value tnum" style="display:block">' + fmt(Math.round(volTraded * 1e8) / 1e8) + ' LOOP</span></span>' +
+        '<span><span class="cs-label" style="display:block">Open offers made</span><span class="cs-value tnum" style="display:block">' + offersMade.length + "</span></span></div>" +
+        '<p class="small dim" style="margin-top:8px">Portfolio value counts listed tokens at their listing price and unlisted tokens at the current floor price' + (floor === null ? " (no floor right now, so unlisted tokens count as 0)" : "") + ".</p>" +
+        '<div class="note-card"><b>About profiles in this static edition</b>Profiles here are read live from the chain — holdings, trades and offers are always exact. Display names, bios, avatars, follows and profile editing need a server, so they are not available in the static version and are not faked here.</div>' +
+        '<div class="chip-row" style="margin-top:20px">' +
+        '<button class="chip' + (tab === "holdings" ? " active" : "") + '" data-ptab="holdings">Holdings</button>' +
+        '<button class="chip' + (tab === "offers" ? " active" : "") + '" data-ptab="offers">Offers made</button>' +
+        '<button class="chip' + (tab === "activity" ? " active" : "") + '" data-ptab="activity">Activity</button></div>' +
+        '<div id="profile-tab-body"></div></div>';
+      var body = document.getElementById("profile-tab-body");
+      if (tab === "holdings") {
+        body.innerHTML = owned.length ?
+          '<div class="panel" style="padding:6px 18px"><div class="list-rows">' + owned.map(function (t) {
+            var val = t.listing && t.listing.active ? t.listing.priceLoop : floor;
+            return '<div class="list-row"><button style="display:contents" data-token="' + t.tokenId + '">' + tokenImgHtml(t) +
+              '<span class="lr-main"><span class="lr-title">' + esc(tokenTitle(t)) + '</span><span class="lr-sub">' + esc(S.contracts.nftName) + " · #" + t.tokenId + (t.listing && t.listing.active ? " · Listed" : "") + '</span></span></button>' +
+              '<span class="lr-value tnum">' + (val !== null && val !== undefined ? fmt(val) + " LOOP" : "—") + '<span class="lr-sub">' + (t.listing && t.listing.active ? "listing price" : "at floor") + "</span></span></div>";
+          }).join("") + "</div></div>"
+          : '<div class="empty-note">This wallet holds no LMNFT tokens right now.</div>';
+      } else if (tab === "offers") {
+        body.innerHTML = offersMade.length ?
+          '<div class="panel" style="padding:6px 18px"><div class="list-rows">' + offersMade.map(function (t) {
+            return '<div class="list-row"><button style="display:contents" data-token="' + t.tokenId + '">' + tokenImgHtml(t) +
+              '<span class="lr-main"><span class="lr-title">' + esc(tokenTitle(t)) + '</span><span class="lr-sub">Open offer · escrowed in the contract</span></span></button>' +
+              '<span class="lr-value tnum">' + fmt(t.offer.amountLoop) + " LOOP</span></div>";
+          }).join("") + "</div></div>"
+          : '<div class="empty-note">No open offers from this wallet.</div>';
+      } else {
+        body.innerHTML = myEvents.length ?
+          '<div class="panel" style="padding:6px 18px"><div class="list-rows">' + myEvents.slice(0, 30).map(function (e) {
+            var t = S.tokenById.get(e.tokenId);
+            return '<div class="list-row"><span class="ev-kind">' + evIcon(e.kind) + '</span><span class="lr-main"><span class="lr-title">' + evLabel(e.kind) + " · " + (t ? esc(tokenTitle(t)) : "#" + e.tokenId) + '</span><span class="lr-sub">' + timeAgo(e.timestamp) + '</span></span>' +
+              '<span class="lr-value tnum">' + (e.priceLoop !== null ? fmt(e.priceLoop) + " LOOP" : "—") + '<span class="lr-sub"><a href="' + e.explorerUrl + '" target="_blank" rel="noopener">tx ↗</a></span></span></div>';
+          }).join("") + "</div></div>"
+          : '<div class="empty-note">No on-chain activity for this wallet yet.</div>';
+      }
+      app.querySelectorAll("[data-ptab]").forEach(function (b) {
+        b.addEventListener("click", function () { app.setAttribute("data-profile-tab", b.getAttribute("data-ptab")); rerender(); });
+      });
+      app.querySelectorAll("[data-copy]").forEach(function (b) {
+        b.addEventListener("click", function () { copyText(b.getAttribute("data-copy"), "Address"); });
+      });
+      bindTokenCards(body);
+    }
+
+    /* ================= CREATE / MINT ================= */
+    var createState = { mode: "build", imageDataUrl: "", imageName: "" };
+    function renderCreate(app) {
+      var traitsHtml = [0, 1].map(function (i) {
+        return '<div class="inline-form" style="margin-bottom:8px"><input class="input trait-label" placeholder="Trait name, e.g. Background" aria-label="Trait name" /><input class="input trait-value" placeholder="Value, e.g. Midnight" aria-label="Trait value" /></div>';
+      }).join("");
+      app.innerHTML =
+        '<div class="page"><h1 class="page-title">Create an NFT</h1>' +
+        '<p class="page-sub">Mint a new token into the Loop Market NFT collection with your own artwork. Minting is a real Loop Network transaction signed by your wallet; the minter is recorded on-chain as the royalty receiver at the collection default of 5%.</p>' +
+        (!W.address ? '<div class="note-card"><b>Connect your wallet to mint</b>You can prepare everything below first — the Mint button will ask you to connect when you are ready.</div>' : "") +
+        '<div class="two-col">' +
+        '<div class="panel"><h3>Artwork &amp; details</h3>' +
+        '<div class="field"><label>Image</label>' +
+        '<div class="inline-form"><label class="btn btn-ghost" style="cursor:pointer">Upload image file<input type="file" id="mint-file" accept="image/*" style="display:none" /></label>' +
+        '<input class="input" id="mint-image-url" placeholder="…or paste an image URL / ipfs:// URI / CID" aria-label="Image URL or IPFS reference" /></div>' +
+        '<div class="f-hint" id="mint-file-note">An uploaded file is embedded directly in the token metadata (a data URI), so it works with no external service — best for small images (under ~100 KB keeps mint gas low). For large artwork, pin the image to IPFS yourself (e.g. Pinata) and paste its ipfs:// URI or CID instead.</div></div>' +
+        '<div class="field"><label for="mint-name">Name</label><input class="input" id="mint-name" maxlength="80" placeholder="e.g. Sakura Dawn #13" /></div>' +
+        '<div class="field"><label for="mint-desc">Description</label><textarea class="input" id="mint-desc" maxlength="600" placeholder="Tell collectors about this piece"></textarea></div>' +
+        '<div class="field"><label>Traits</label><div id="trait-rows">' + traitsHtml + '</div><button class="text-btn" id="trait-add">+ Add a trait</button></div>' +
+        '<div class="field"><label for="mint-list-price">List after minting (optional)</label><input class="input" id="mint-list-price" inputmode="decimal" placeholder="Price in LOOP — leave empty to just mint" />' +
+        '<div class="f-hint">If you set a price, you will be asked to approve the marketplace and sign the listing right after the mint confirms.</div></div>' +
+        '<label class="radio-card' + (createState.mode === "build" ? " sel" : "") + '"><input type="radio" name="mint-mode" value="build" ' + (createState.mode === "build" ? "checked" : "") + ' /><span><strong>Build my metadata</strong><span class="small dim" style="display:block">The page builds the standard ERC-721 JSON from the fields above and stores it as an on-chain data URI.</span></span></label>' +
+        '<label class="radio-card' + (createState.mode === "ipfs" ? " sel" : "") + '"><input type="radio" name="mint-mode" value="ipfs" ' + (createState.mode === "ipfs" ? "checked" : "") + ' /><span style="flex:1"><strong>Use my own IPFS metadata</strong><span class="small dim" style="display:block">Pin your metadata JSON with a service like Pinata, then paste its URI.</span>' +
+        '<input class="input" id="mint-ipfs-uri" placeholder="ipfs://bafkrei…" style="margin-top:9px" aria-label="Your IPFS metadata URI" /></span></label>' +
+        '<button class="btn btn-primary btn-block" id="mint-go" style="margin-top:8px"' + (W.busy ? " disabled" : "") + ">" + (W.address ? "Mint NFT" : "Connect wallet &amp; mint") + "</button>" +
+        '<p class="small dim" style="margin-top:10px">Minting goes to your own wallet address. Gas is paid in LOOP to the network; Loop Market charges nothing to mint.</p></div>' +
+        '<div class="panel"><h3>Preview</h3><div id="mint-preview"><div class="token-media" style="aspect-ratio:1/1"><span class="thumb-ph">' + LOOP_MARK_SVG + '</span></div>' +
+        '<div style="font-weight:800;font-size:17px;margin-top:14px" id="pv-name">Untitled</div>' +
+        '<div class="small dim" id="pv-desc">Your description will appear here.</div>' +
+        '<div class="kv" style="margin-top:10px"><span class="k">Collection</span><span class="v">' + (S.contracts ? esc(S.contracts.nftName) : "Loop Market NFT") + '</span></div>' +
+        '<div class="kv"><span class="k">Royalty</span><span class="v">5% to you (minter)</span></div>' +
+        '<div class="kv"><span class="k">Network</span><span class="v">Loop Mainnet · 15551</span></div></div></div>' +
+        "</div></div>";
+      var fileInput = document.getElementById("mint-file");
+      var urlInput = document.getElementById("mint-image-url");
+      function updatePreview() {
+        var name = document.getElementById("mint-name").value.trim();
+        var desc = document.getElementById("mint-desc").value.trim();
+        document.getElementById("pv-name").textContent = name || "Untitled";
+        document.getElementById("pv-desc").textContent = desc || "Your description will appear here.";
+        var src = createState.imageDataUrl || urlInput.value.trim();
+        var media = document.querySelector("#mint-preview .token-media");
+        if (src) {
+          var resolved = ipfsToGateway(src, IPFS_GATEWAYS[0]) || src;
+          media.innerHTML = '<img src="' + esc(resolved) + '" alt="Artwork preview" onerror="this.style.display=\'none\'" />';
+        } else {
+          media.innerHTML = '<span class="thumb-ph">' + LOOP_MARK_SVG + "</span>";
+        }
+      }
+      fileInput.addEventListener("change", function () {
+        var f = fileInput.files && fileInput.files[0];
+        if (!f) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          createState.imageDataUrl = String(reader.result || "");
+          createState.imageName = f.name;
+          urlInput.value = "";
+          var kb = Math.round(f.size / 1024);
+          document.getElementById("mint-file-note").textContent = "Selected " + f.name + " (" + kb + " KB) — it will be embedded in the token metadata." + (kb > 150 ? " That is large for an on-chain data URI: expect noticeably higher mint gas. Pinning to IPFS and pasting the CID is cheaper." : "");
+          updatePreview();
+        };
+        reader.readAsDataURL(f);
+      });
+      urlInput.addEventListener("input", function () { createState.imageDataUrl = ""; updatePreview(); });
+      document.getElementById("mint-name").addEventListener("input", updatePreview);
+      document.getElementById("mint-desc").addEventListener("input", updatePreview);
+      document.getElementById("trait-add").addEventListener("click", function () {
+        var rows = document.getElementById("trait-rows");
+        var div = document.createElement("div");
+        div.className = "inline-form"; div.style.marginBottom = "8px";
+        div.innerHTML = '<input class="input trait-label" placeholder="Trait name" aria-label="Trait name" /><input class="input trait-value" placeholder="Value" aria-label="Trait value" />';
+        rows.appendChild(div);
+      });
+      app.querySelectorAll('input[name="mint-mode"]').forEach(function (r) {
+        r.addEventListener("change", function () {
+          createState.mode = r.value;
+          app.querySelectorAll(".radio-card").forEach(function (c) { c.classList.toggle("sel", c.contains(r)); });
+        });
+      });
+      document.getElementById("mint-go").addEventListener("click", function () {
+        if (!W.address) { connectWallet(); return; }
+        doMint(app);
+      });
+    }
+    function doMint(app) {
+      var uri;
+      if (createState.mode === "ipfs") {
+        uri = document.getElementById("mint-ipfs-uri").value.trim();
+        if (uri.indexOf("ipfs://") !== 0) { toast("err", "Paste your IPFS metadata URI", "It should start with ipfs:// — pin the metadata JSON first, then paste its URI."); return; }
+      } else {
+        var name = document.getElementById("mint-name").value.trim();
+        var desc = document.getElementById("mint-desc").value.trim();
+        var image = createState.imageDataUrl || document.getElementById("mint-image-url").value.trim();
+        if (!name) { toast("err", "Give your NFT a name", "The name is part of the on-chain metadata and cannot be changed later."); return; }
+        if (!image) { toast("err", "Add an image", "Upload an image file or paste an image URL / ipfs:// URI / CID."); return; }
+        if (/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[a-z0-9]{20,})$/.test(image)) image = "ipfs://" + image;
+        var traits = [];
+        app.querySelectorAll("#trait-rows .inline-form").forEach(function (row) {
+          var l = row.querySelector(".trait-label").value.trim();
+          var v = row.querySelector(".trait-value").value.trim();
+          if (l && v) traits.push({ trait_type: l, value: v });
+        });
+        var meta = { name: name, description: desc, image: image };
+        if (traits.length) meta.attributes = traits;
+        uri = toDataUri(meta);
+      }
+      var listPrice = document.getElementById("mint-list-price").value.trim();
+      sendTx("Mint NFT", NFT_CONTRACT, encodeMint(W.address, uri), 0n).then(function (receipt) {
+        if (!receipt) return;
+        // The new token ID is in the Minted event of the receipt.
+        var newId = null;
+        (receipt.logs || []).forEach(function (log) {
+          if ((log.topics[0] || "").toLowerCase() === TOPIC.minted) newId = topicToUint(log.topics[1]);
+        });
+        if (newId === null) {
+          (receipt.logs || []).forEach(function (log) {
+            if ((log.topics[0] || "").toLowerCase() === TOPIC.transfer && topicToAddress(log.topics[1]) === ZERO_ADDRESS) newId = topicToUint(log.topics[3]);
+          });
+        }
+        loadMarketplace().then(function () {
+          rerender();
+          if (newId !== null) {
+            toast("ok", "NFT minted", 'Your token is LMNFT #' + newId + '. <a href="#/token/' + newId + '">Open it</a>');
+            if (listPrice) {
+              var wei = parseLoopToWei(listPrice);
+              if (wei) {
+                toast("info", "One more step to list it", "Approve the marketplace, then sign the listing for #" + newId + " at " + listPrice + " LOOP.");
+                ensureApproval(newId).then(function (ok) {
+                  if (!ok) return;
+                  sendTx("List LMNFT #" + newId, MARKETPLACE_CONTRACT, SEL.list + uintWord(newId) + wei.toString(16).padStart(64, "0"), 0n);
+                });
+              }
+            } else {
+              location.hash = "#/token/" + newId;
+            }
+          }
+        });
+      });
+    }
+
+    /* ================= DOCUMENTS ================= */
+    function renderDocuments(app) {
+      var c = S.contracts;
+      var feePct = c ? c.feePercent : 2.5;
+      function contractRow(label, addr) {
+        return '<div class="kv"><span class="k">' + label + '</span><span class="v"><span class="addr">' + shortAddr(addr) + '</span> ' +
+          '<button class="copy-btn" data-copy="' + addr + '">Copy</button> <a href="' + EXPLORER_URL + "/address/" + addr + '" target="_blank" rel="noopener">Explorer ↗</a></span></div>';
+      }
+      app.innerHTML =
+        '<div class="page"><h1 class="page-title">Documents</h1>' +
+        '<p class="page-sub">Fees, safety, and the live contract facts of Loop Market — read from the chain, not from a brochure.</p>' +
+        '<div class="doc-section" id="doc-fees"><h2>Pricing &amp; Fees</h2>' +
+        '<p>Buyers pay the listing price plus network gas — nothing more. On every sale the marketplace contract deducts its fee and the creator royalty from the seller\'s side, in the same transaction.</p>' +
+        '<div class="panel"><div class="kv"><span class="k">Marketplace fee</span><span class="v">' + fmt(feePct) + '% (FEE_BPS ' + (c ? c.feeBps : 250) + ', read live from the contract)</span></div>' +
+        '<div class="kv"><span class="k">Creator royalty</span><span class="v">Default 5% · per-token via ERC-2981 · hard cap 10%</span></div>' +
+        '<div class="kv"><span class="k">Fee recipient</span><span class="v addr">' + (c ? shortAddr(c.feeRecipient) : "—") + ' <span class="dim" style="font-family:var(--font)">(immutable — set at deployment)</span></span></div>' +
+        '<div class="kv"><span class="k">Minting</span><span class="v">Free — you pay only network gas</span></div>' +
+        '<div class="kv"><span class="k">Offers</span><span class="v">Free to make — the offered LOOP is escrowed in the contract and returned in full if you withdraw</span></div>' +
+        '<h3 style="margin:18px 0 4px;font-size:15px">Fee calculator</h3>' +
+        '<div class="inline-form"><input class="input" id="calc-price" inputmode="decimal" placeholder="Sale price in LOOP, e.g. 1.5" aria-label="Sale price in LOOP" /></div>' +
+        '<div class="field" style="margin-top:12px"><label for="calc-royalty">Creator royalty: <span id="calc-royalty-label">5%</span></label>' +
+        '<input type="range" id="calc-royalty" min="0" max="10" step="0.5" value="5" /></div>' +
+        '<div class="calc-out" id="calc-out"></div></div></div>' +
+        '<div class="doc-section" id="doc-safety"><h2>Safety Center</h2>' +
+        '<p>Loop Market is non-custodial: this page never holds keys, seed phrases, or funds. Every trade is a transaction you sign in your own wallet against the two contracts below.</p>' +
+        '<div class="panel"><h3>Live contract verification</h3>' +
+        (c ?
+          '<div class="kv"><span class="k">LoopMarketNFT code on-chain</span><span class="v">' + c.nftCodeBytes.toLocaleString("en-US") + ' bytes</span></div>' +
+          '<div class="kv"><span class="k">LoopMarketplace code on-chain</span><span class="v">' + c.marketplaceCodeBytes.toLocaleString("en-US") + ' bytes</span></div>' +
+          '<div class="kv"><span class="k">Marketplace linked to this NFT contract</span><span class="v">' + (c.linked ? "Yes — nft() matches" : "No — do not trade") + '</span></div>' +
+          '<div class="kv"><span class="k">Marketplace fee read live</span><span class="v">' + c.feeBps + ' bps (' + fmt(c.feePercent) + '%)</span></div>' +
+          '<div class="kv"><span class="k">Contract owners</span><span class="v addr">NFT ' + shortAddr(c.nftOwner) + ' · Marketplace ' + shortAddr(c.marketplaceOwner) + "</span></div>"
+          : '<p class="small dim">Contract facts appear here once the live read completes.</p>') +
+        '<ul class="checks">' +
+        '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg><span>Your wallet should show <b>Loop Network Mainnet, Chain ID 15551</b> before you sign. This page refuses to send transactions on any other chain.</span></li>' +
+        '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg><span>Never share a seed phrase or private key — real support never asks for one, and Loop Market has no support account that will DM you first.</span></li>' +
+        '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg><span>Approving the marketplace lets it transfer a token only when a sale or accepted offer settles. You can revoke approvals in your wallet at any time.</span></li>' +
+        '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg><span>Blockchain transactions are irreversible. Double-check the token, the price, and the contract addresses on this page before signing.</span></li>' +
+        '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg><span>An offer escrows real LOOP in the marketplace contract. It stays there until you withdraw it or the owner accepts — there is no expiry.</span></li>' +
+        "</ul></div></div>" +
+        '<div class="doc-section"><h2>Contracts &amp; network</h2>' +
+        '<div class="panel">' +
+        contractRow("LoopMarketNFT (LMNFT)", NFT_CONTRACT) +
+        contractRow("LoopMarketplace", MARKETPLACE_CONTRACT) +
+        (c ? contractRow("Fee recipient (immutable)", c.feeRecipient) : "") +
+        '<div class="kv"><span class="k">Network</span><span class="v">Loop Network Mainnet · Chain ID 15551 (0x3cbf)</span></div>' +
+        '<div class="kv"><span class="k">Public RPC</span><span class="v addr">https://api.mainnetloop.com <button class="copy-btn" data-copy="https://api.mainnetloop.com">Copy</button></span></div>' +
+        '<div class="kv"><span class="k">Block explorer</span><span class="v"><a href="https://explorer.mainnetloop.com" target="_blank" rel="noopener">explorer.mainnetloop.com ↗</a></span></div>' +
+        '<div class="kv"><span class="k">Native currency</span><span class="v">LOOP · 18 decimals</span></div>' +
+        "</div></div>" +
+        '<div class="doc-section"><h2>How Loop Market works</h2>' +
+        '<div class="panel"><p style="margin:0" class="dim">A short guide to how buying, selling, offers and royalties work here — written by the marketplace owner. This space is reserved for it and will be filled in by the owner.</p></div></div>' +
+        statusLineHtml() + "</div>";
+      app.querySelectorAll("[data-copy]").forEach(function (b) {
+        b.addEventListener("click", function () { copyText(b.getAttribute("data-copy"), "Copied"); });
+      });
+      var priceInput = document.getElementById("calc-price");
+      var royaltyInput = document.getElementById("calc-royalty");
+      function runCalc() {
+        var royalty = Number(royaltyInput.value);
+        document.getElementById("calc-royalty-label").textContent = royalty + "%";
+        var price = parseFloat(priceInput.value);
+        var out = document.getElementById("calc-out");
+        if (!price || price <= 0) { out.innerHTML = '<p class="small dim" style="grid-column:1/-1;margin:0">Enter a sale price to see the exact split the contract will make.</p>'; return; }
+        var fee = price * feePct / 100;
+        var roy = price * royalty / 100;
+        var seller = price - fee - roy;
+        out.innerHTML =
+          '<div class="calc-cell"><div class="cc-label">Buyer pays</div><div class="cc-value tnum">' + fmt(Math.round(price * 1e8) / 1e8) + ' LOOP</div></div>' +
+          '<div class="calc-cell"><div class="cc-label">Marketplace fee ' + fmt(feePct) + '%</div><div class="cc-value tnum">' + fmt(Math.round(fee * 1e8) / 1e8) + ' LOOP</div></div>' +
+          '<div class="calc-cell"><div class="cc-label">Royalty ' + royalty + '%</div><div class="cc-value tnum">' + fmt(Math.round(roy * 1e8) / 1e8) + ' LOOP</div></div>' +
+          '<div class="calc-cell"><div class="cc-label">Seller receives</div><div class="cc-value tnum">' + fmt(Math.round(seller * 1e8) / 1e8) + ' LOOP</div></div>';
+      }
+      priceInput.addEventListener("input", runCalc);
+      royaltyInput.addEventListener("input", runCalc);
+      runCalc();
+    }
+  </script>
+
+    <script>
+    /* ================= NAV / ROUTER / CHROME ================= */
+    var NAV_ITEMS = [
+      { route: "explore", label: "Explore", icon: '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5Z"/>' },
+      { route: "collection", label: "Collection", icon: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>' },
+      { route: "activity", label: "Activity", icon: '<path d="M3 12h4l2.5-6 4 12L16 12h5"/>' },
+      { route: "create", label: "Create", icon: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>' }
+    ];
+    function navIcon(paths) {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + paths + "</svg>";
+    }
+    function currentRoute() {
+      var h = (location.hash || "#/explore").replace(/^#\/?/, "");
+      var parts = h.split("/");
+      return { name: parts[0] || "explore", arg: parts[1] || null };
+    }
+    function activeNav(routeName) {
+      if (routeName === "explore") return "explore";
+      if (routeName === "collection" || routeName === "collection-profile" || routeName === "token") return "collection";
+      if (routeName === "activity") return "activity";
+      if (routeName === "create") return "create";
+      return "";
+    }
+    function renderNavs() {
+      var active = activeNav(currentRoute().name);
+      document.getElementById("top-tabs").innerHTML = NAV_ITEMS.map(function (n) {
+        return '<button class="tab' + (active === n.route ? " active" : "") + '" data-nav="' + n.route + '">' + n.label + "</button>";
+      }).join("");
+      document.getElementById("bottom-nav").innerHTML = NAV_ITEMS.map(function (n) {
+        return '<button class="bn-item' + (active === n.route ? " active" : "") + '" data-nav="' + n.route + '">' + navIcon(n.icon) + "<span>" + n.label + "</span></button>";
+      }).join("");
+      document.querySelectorAll("[data-nav]").forEach(function (b) {
+        b.addEventListener("click", function () { location.hash = "#/" + b.getAttribute("data-nav"); });
+      });
+    }
+    var DRAWER_ITEMS = [
+      { label: "Discover", hash: "#/explore", icon: '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5Z"/>' },
+      { label: "Collections", hash: "#/collection", icon: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>' },
+      { label: "Activity", hash: "#/activity", icon: '<path d="M3 12h4l2.5-6 4 12L16 12h5"/>' },
+      { label: "Create", hash: "#/create", icon: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>' },
+      { sep: true },
+      { label: "Statistics", hash: "#/statistics", icon: '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2" transform="scale(.92) translate(1 1)"/>' },
+      { label: "Documents", hash: "#/documents", icon: '<path d="M6 2.5h8L19 7.5v14H6Z"/><path d="M13.5 2.5v5.5H19"/>' },
+      { label: "Pricing & Fees", hash: "#/documents", icon: '<path d="M12.6 3.6 21 12l-9 9-8.4-8.4a2 2 0 0 1 0-2.8Z" transform="scale(.92) translate(1 1)"/><circle cx="8" cy="8" r="1.6"/>' },
+      { label: "Safety Center", hash: "#/documents", icon: '<path d="M12 3 5 5.8v5.4c0 4.6 3 7.7 7 9.3 4-1.6 7-4.7 7-9.3V5.8Z"/><path d="m9 11.8 2.2 2.2 4-4.2"/>' },
+      { sep: true },
+      { label: "My NFTs / Profile", hash: "#/profile", icon: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>' }
+    ];
+    function renderDrawerNav() {
+      document.getElementById("drawer-nav").innerHTML = DRAWER_ITEMS.map(function (item) {
+        if (item.sep) return '<div class="drawer-sep"></div>';
+        return '<button class="drawer-link" data-drawer-hash="' + item.hash + '"><span class="dic">' + navIcon(item.icon) + "</span>" + item.label + "</button>";
+      }).join("");
+      document.querySelectorAll("[data-drawer-hash]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          closeDrawer();
+          var target = b.getAttribute("data-drawer-hash");
+          if (target === "#/profile" && W.address) target = "#/profile/" + W.address;
+          location.hash = target;
+        });
+      });
+    }
+    function openDrawer() { document.getElementById("drawer-root").classList.add("open"); renderDrawerProfile(); }
+    function closeDrawer() { document.getElementById("drawer-root").classList.remove("open"); }
+
+    /* ---------------- search ---------------- */
+    function openSearch() {
+      document.getElementById("search-panel").classList.add("open");
+      renderSearchResults("");
+      setTimeout(function () { document.getElementById("search-input").focus(); }, 30);
+    }
+    function closeSearch() {
+      document.getElementById("search-panel").classList.remove("open");
+      document.getElementById("search-input").value = "";
+    }
+    function renderSearchResults(q) {
+      var box = document.getElementById("search-results");
+      q = (q || "").trim().toLowerCase();
+      if (!S.loaded) { box.innerHTML = '<div class="search-empty">Reading the live collection…</div>'; return; }
+      if (!S.online) { box.innerHTML = '<div class="search-empty">Live data is unavailable right now — search works again as soon as the Loop Network connection is back.</div>'; return; }
+      if (!q) {
+        var trending = [];
+        var seen = {};
+        S.salesAll.forEach(function (s) {
+          if (trending.length >= 6) return;
+          var t = S.tokenById.get(s.tokenId);
+          if (t && !seen[t.tokenId]) { seen[t.tokenId] = true; trending.push(t); }
+        });
+        if (trending.length < 6) {
+          S.tokens.forEach(function (t) { if (trending.length < 6 && !seen[t.tokenId]) { seen[t.tokenId] = true; trending.push(t); } });
+        }
+        box.innerHTML = '<div class="search-label">Trending on Loop Market</div>' + (trending.length ? trending.map(searchItemHtml).join("") : '<div class="search-empty">No tokens yet.</div>');
+        bindSearchItems(box);
+        return;
+      }
+      var isAddr = /^0x[0-9a-f]{4,}$/.test(q);
+      var idMatch = q.replace(/^#/, "");
+      var results = S.tokens.filter(function (t) {
+        if ((t.name || "").toLowerCase().indexOf(q) >= 0) return true;
+        if (String(t.tokenId) === idMatch) return true;
+        if (t.owner.toLowerCase().indexOf(q) >= 0) return true;
+        return t.traits.some(function (tr) { return (tr.label + " " + tr.value).toLowerCase().indexOf(q) >= 0; });
+      }).slice(0, 12);
+      var html = "";
+      if (isAddr) {
+        var owns = S.tokens.filter(function (t) { return t.owner.toLowerCase() === q; }).length;
+        html += '<div class="search-label">Wallet</div><button class="search-item" data-search-profile="' + esc(q) + '">' + avatarImg(q, 40) +
+          '<span><span class="si-name addr" style="display:block">' + shortAddr(q) + '</span><span class="si-sub" style="display:block">Profile · holds ' + owns + ' LMNFT</span></span></button>';
+      }
+      html += '<div class="search-label">NFTs</div>' + (results.length ? results.map(searchItemHtml).join("") : '<div class="search-empty">No NFTs match “' + esc(q) + '”.</div>');
+      box.innerHTML = html;
+      bindSearchItems(box);
+    }
+    function searchItemHtml(t) {
+      var sub = (S.contracts ? S.contracts.nftName : "Loop Market NFT") + " · #" + t.tokenId + " · Owner " + shortAddr(t.owner) +
+        (t.listing && t.listing.active ? " · " + fmt(t.listing.priceLoop) + " LOOP" : "");
+      return '<button class="search-item" data-search-token="' + t.tokenId + '">' + tokenImgHtml(t) +
+        '<span style="min-width:0"><span class="si-name" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(tokenTitle(t)) + '</span><span class="si-sub" style="display:block">' + esc(sub) + "</span></span></button>";
+    }
+    function bindSearchItems(box) {
+      box.querySelectorAll("[data-search-token]").forEach(function (el) {
+        // tokenImgHtml images inside search items need the small size.
+        el.querySelectorAll("img").forEach(function (img) { img.style.width = "40px"; img.style.height = "40px"; img.style.borderRadius = "10px"; });
+        el.querySelectorAll(".thumb-ph").forEach(function (ph) { ph.style.width = "40px"; ph.style.height = "40px"; ph.style.borderRadius = "10px"; ph.style.flex = "none"; });
+        el.addEventListener("click", function () { closeSearch(); location.hash = "#/token/" + el.getAttribute("data-search-token"); });
+      });
+      box.querySelectorAll("[data-search-profile]").forEach(function (el) {
+        el.addEventListener("click", function () { closeSearch(); location.hash = "#/profile/" + el.getAttribute("data-search-profile"); });
+      });
+    }
+
+    /* ---------------- theme ---------------- */
+    function applyThemeIcon() {
+      var dark = document.documentElement.dataset.theme !== "light";
+      document.getElementById("ic-moon").style.display = dark ? "" : "none";
+      document.getElementById("ic-sun").style.display = dark ? "none" : "";
+    }
+    function toggleTheme() {
+      var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem("loop-market-theme", next); } catch (e) { /* private mode */ }
+      applyThemeIcon();
+    }
+
+    /* ---------------- render root ---------------- */
+    var lastHash = location.hash;
+    function rerender() {
+      var app = document.getElementById("app");
+      var y = window.scrollY;
+      route(app);
+      if (location.hash === lastHash) window.scrollTo(0, y);
+    }
+    function route(app) {
+      app = app || document.getElementById("app");
+      var r = currentRoute();
+      renderNavs();
+      switch (r.name) {
+        case "collection": renderCollection(app); break;
+        case "collection-profile": renderCollectionProfile(app); break;
+        case "activity": renderActivity(app); break;
+        case "statistics": renderStatistics(app); break;
+        case "documents": renderDocuments(app); break;
+        case "create": renderCreate(app); break;
+        case "token": renderToken(app, Number(r.arg)); break;
+        case "profile":
+          if (r.arg) renderProfile(app, r.arg);
+          else if (W.address) { location.hash = "#/profile/" + W.address; }
+          else {
+            app.innerHTML = '<div class="page"><h1 class="page-title">My NFTs</h1><div class="empty-note" style="margin-top:14px">Connect your wallet to see your Loop Market NFTs, listings and offers — your profile is read live from the chain.</div><p style="margin-top:16px"><button class="btn btn-primary" id="profile-connect">Connect Wallet</button></p></div>';
+            document.getElementById("profile-connect").addEventListener("click", connectWallet);
+          }
+          break;
+        case "explore":
+        default: renderExplore(app); break;
+      }
+    }
+
+    /* ---------------- init ---------------- */
+    function init() {
+      renderNavs();
+      renderDrawerNav();
+      renderWalletSlot();
+      applyThemeIcon();
+      document.getElementById("btn-theme").addEventListener("click", toggleTheme);
+      document.getElementById("btn-search").addEventListener("click", openSearch);
+      document.getElementById("search-close").addEventListener("click", closeSearch);
+      document.getElementById("search-backdrop").addEventListener("click", closeSearch);
+      document.getElementById("search-input").addEventListener("input", function (e) { renderSearchResults(e.target.value); });
+      document.getElementById("btn-drawer").addEventListener("click", openDrawer);
+      document.getElementById("drawer-close").addEventListener("click", closeDrawer);
+      document.getElementById("drawer-backdrop").addEventListener("click", closeDrawer);
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { closeSearch(); closeDrawer(); }
+      });
+      window.addEventListener("hashchange", function () {
+        var changed = location.hash !== lastHash;
+        lastHash = location.hash;
+        route();
+        if (changed) window.scrollTo(0, 0);
+      });
+      route();
+      initWalletListeners();
+      loadMarketplace().then(function () { rerender(); });
+      // Silent background refresh — no button, no reload, no scroll reset.
+      setInterval(function () {
+        if (document.hidden || W.busy) return;
+        loadMarketplace().then(function () {
+          if (currentRoute().name !== "create") rerender();
+          if (document.getElementById("search-panel").classList.contains("open")) {
+            renderSearchResults(document.getElementById("search-input").value);
+          }
+        });
+      }, 30000);
+      // Activity refreshes on a tighter loop (events only).
+      setInterval(function () {
+        if (document.hidden || W.busy || S.loading) return;
+        var name = currentRoute().name;
+        if (name !== "activity" && name !== "statistics") return;
+        loadEvents().then(function (ev) {
+          S.events = ev.events; S.salesAll = ev.salesAll;
+          finishDerived(new Date().toISOString());
+          rerender();
+        }).catch(function () { /* keep the current view on a failed poll */ });
+      }, 20000);
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+    else init();
+    </script>
+  </body>
+</html>

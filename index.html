@@ -68,7 +68,7 @@
         font-size: 15px;
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
-        padding-bottom: 0;
+        padding-bottom: calc(104px + env(safe-area-inset-bottom));
       }
       a { color: var(--accent); text-decoration: none; }
       a:hover { text-decoration: underline; }
@@ -115,18 +115,6 @@
       .wallet-btn svg { width: 17px; height: 17px; }
       .wallet-btn.icon-only { width: 36px; padding: 0; justify-content: center; border-radius: 50%; }
       .dot-live { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent); }
-
-      /* top nav tabs */
-      .tabrow { border-bottom: 1px solid var(--border-soft); background: var(--header-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); position: sticky; top: 64px; z-index: 55; }
-      .tabrow-in { display: flex; gap: 6px; padding: 10px 0; overflow-x: auto; scrollbar-width: none; }
-      .tabrow-in::-webkit-scrollbar { display: none; }
-      .tab {
-        border: 1px solid transparent; background: transparent; color: var(--dim);
-        font-weight: 700; font-size: 15px; padding: 9px 20px; border-radius: 999px; min-height: 40px;
-        white-space: nowrap;
-      }
-      .tab:hover { color: var(--text); }
-      .tab.active { background: var(--text); color: var(--bg); }
 
       /* ---------- search panel ---------- */
       .search-panel {
@@ -409,23 +397,26 @@
       .foot-links a, .foot-links button { color: var(--dim); font-size: 13px; font-weight: 700; background: none; border: 0; padding: 8px 9px; min-height: 36px; display: inline-flex; align-items: center; }
       .foot-links a:hover, .foot-links button:hover { color: var(--text); text-decoration: none; }
       .bottom-nav {
-        display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 65;
-        background: var(--header-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-        border-top: 1px solid var(--border-soft); padding-bottom: env(safe-area-inset-bottom);
+        position: fixed; left: 50%; transform: translateX(-50%);
+        bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 65;
+        width: min(480px, calc(100vw - 24px));
+        background: var(--header-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border); border-radius: 999px;
+        box-shadow: var(--shadow); padding: 6px;
       }
-      .bottom-nav-in { display: grid; grid-template-columns: repeat(4, 1fr); }
-      .bn-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: 58px; min-height: 52px; color: var(--dim); font-size: 11px; font-weight: 700; background: none; border: 0; }
+      .bottom-nav-in { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+      .bn-item {
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+        min-height: 52px; padding: 7px 4px; border-radius: 999px;
+        color: var(--dim); font-size: 11px; font-weight: 700; background: none; border: 0;
+        transition: background .15s, color .15s;
+      }
       .bn-item svg { width: 21px; height: 21px; }
-      .bn-item.active { color: var(--accent); }
-      @media (max-width: 860px) {
-        .bottom-nav { display: block; }
-        body { padding-bottom: 62px; }
-        .tabrow { display: none; }
-      }
+      .bn-item:hover { color: var(--text); }
+      .bn-item.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
 
       /* ---------- toasts / modal ---------- */
-      .toasts { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 9px; width: min(440px, calc(100vw - 28px)); }
-      @media (max-width: 860px) { .toasts { bottom: 76px; } }
+      .toasts { position: fixed; bottom: calc(96px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 9px; width: min(440px, calc(100vw - 28px)); }
       .toast { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 13px 15px; font-size: 14px; display: flex; gap: 11px; align-items: flex-start; animation: toast-in .25s ease; }
       @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
       @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
@@ -490,9 +481,6 @@
         </button>
       </div>
     </header>
-    <nav class="tabrow" aria-label="Primary">
-      <div class="wrap tabrow-in" id="top-tabs"></div>
-    </nav>
 
     <div class="search-panel" id="search-panel" role="dialog" aria-modal="true" aria-label="Search">
       <div class="search-backdrop" id="search-backdrop"></div>
@@ -542,7 +530,7 @@
       </div>
     </footer>
 
-    <nav class="bottom-nav" aria-label="Mobile">
+    <nav class="bottom-nav" aria-label="Primary">
       <div class="bottom-nav-in" id="bottom-nav"></div>
     </nav>
 
@@ -2390,9 +2378,6 @@
     }
     function renderNavs() {
       var active = activeNav(currentRoute().name);
-      document.getElementById("top-tabs").innerHTML = NAV_ITEMS.map(function (n) {
-        return '<button class="tab' + (active === n.route ? " active" : "") + '" data-nav="' + n.route + '">' + n.label + "</button>";
-      }).join("");
       document.getElementById("bottom-nav").innerHTML = NAV_ITEMS.map(function (n) {
         return '<button class="bn-item' + (active === n.route ? " active" : "") + '" data-nav="' + n.route + '">' + navIcon(n.icon) + "<span>" + n.label + "</span></button>";
       }).join("");

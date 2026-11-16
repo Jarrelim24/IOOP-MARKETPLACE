@@ -847,7 +847,7 @@
       holders: [], totals: { minted: 0, activeListings: 0, floorLoop: null, owners: 0, salesCount: 0, volumeLoop: 0, activeOffers: 0 },
       rarity: new Map(), metaCache: new Map(), loadError: null
     };
-    var W = { address: null, balanceLoop: null, busy: false, busyLabel: "" };
+    var W = { address: null, balanceLoop: null, busy: false, busyLabel: "", lastTxError: "" };
 
     function loadMarketplace() {
       if (S.loading) return Promise.resolve();
@@ -1256,7 +1256,7 @@
         })();
       });
     }
-    function sendTx(label, to, data, valueWei) {
+    function sendTx(label, to, data, valueWei, opts) {
       var eth = ethProvider();
       if (!eth || !W.address) { toast("err", "Connect your wallet first", "Buying, listing, offering and minting are signed by your own wallet."); return Promise.resolve(null); }
       if (W.busy) { toast("info", "A transaction is already in progress", "Wait for " + W.busyLabel + " to finish in your wallet."); return Promise.resolve(null); }
@@ -1265,6 +1265,7 @@
         W.busy = true; W.busyLabel = label; rerender();
         var tx = { from: W.address, to: to, data: data };
         if (valueWei && valueWei > 0n) tx.value = "0x" + valueWei.toString(16);
+        if (opts && opts.gas) tx.gas = "0x" + opts.gas.toString(16);
         return eth.request({ method: "eth_sendTransaction", params: [tx] }).then(function (hash) {
           var pending = toastTx(label + " — submitted", hash);
           return waitForReceipt(hash).then(function (receipt) {
@@ -1276,14 +1277,15 @@
               setTimeout(function () { loadMarketplace().then(rerender); }, 2500);
               return receipt;
             }
-            if (receipt) toast("err", label + " — reverted", "The transaction was mined but reverted. Check it on the explorer for details.");
+            if (receipt) { W.lastTxError = "The transaction was mined but reverted on-chain."; toast("err", label + " — reverted", "The transaction was mined but reverted. Check it on the explorer for details."); }
             else toast("err", label + " — not confirmed yet", "No receipt after 100 seconds. Check the transaction on the explorer before retrying.");
             rerender();
             return null;
           });
         }).catch(function (err) {
           W.busy = false; W.busyLabel = "";
-          var msg = err && err.code === 4001 ? "You rejected the signature in your wallet." : (err && err.message ? String(err.message).slice(0, 160) : "The wallet refused the transaction.");
+          var msg = err && err.code === 4001 ? "You rejected the signature in your wallet." : (err && err.message ? String(err.message).slice(0, 300) : "The wallet refused the transaction.");
+          W.lastTxError = msg;
           toast("err", label + " — not sent", esc(msg));
           rerender();
           return null;
@@ -2135,10 +2137,10 @@
     }
 
     /* ================= CREATE / MINT ================= */
-    var createState = { mode: "build", imageDataUrl: "", imageName: "" };
+    var createState = { mode: "build", imageDataUrl: "", imageName: "", imageInfo: "", imageUrl: "", name: "", desc: "", listPrice: "", ipfsUri: "", traits: [{ l: "", v: "" }, { l: "", v: "" }] };
     function renderCreate(app) {
-      var traitsHtml = [0, 1].map(function (i) {
-        return '<div class="inline-form" style="margin-bottom:8px"><input class="input trait-label" placeholder="Trait name, e.g. Background" aria-label="Trait name" /><input class="input trait-value" placeholder="Value, e.g. Midnight" aria-label="Trait value" /></div>';
+      var traitsHtml = createState.traits.map(function (tr) {
+        return '<div class="inline-form" style="margin-bottom:8px"><input class="input trait-label" placeholder="Trait name, e.g. Background" aria-label="Trait name" value="' + esc(tr.l) + '" /><input class="input trait-value" placeholder="Value, e.g. Midnight" aria-label="Trait value" value="' + esc(tr.v) + '" /></div>';
       }).join("");
       app.innerHTML =
         '<div class="page"><h1 class="page-title">Create an NFT</h1>' +
@@ -2148,21 +2150,22 @@
         '<div class="panel"><h3>Artwork &amp; details</h3>' +
         '<div class="field"><label>Image</label>' +
         '<div class="inline-form"><label class="btn btn-ghost" style="cursor:pointer">Upload image file<input type="file" id="mint-file" accept="image/*" style="display:none" /></label>' +
-        '<input class="input" id="mint-image-url" placeholder="…or paste an image URL / ipfs:// URI / CID" aria-label="Image URL or IPFS reference" /></div>' +
-        '<div class="f-hint" id="mint-file-note">An uploaded file is embedded directly in the token metadata (a data URI), so it works with no external service — best for small images (under ~100 KB keeps mint gas low). For large artwork, pin the image to IPFS yourself (e.g. Pinata) and paste its ipfs:// URI or CID instead.</div></div>' +
-        '<div class="field"><label for="mint-name">Name</label><input class="input" id="mint-name" maxlength="80" placeholder="e.g. Sakura Dawn #13" /></div>' +
-        '<div class="field"><label for="mint-desc">Description</label><textarea class="input" id="mint-desc" maxlength="600" placeholder="Tell collectors about this piece"></textarea></div>' +
+        '<input class="input" id="mint-image-url" placeholder="…or paste an image URL / ipfs:// URI / CID" aria-label="Image URL or IPFS reference" value="' + esc(createState.imageUrl) + '" /></div>' +
+        '<div class="f-hint" id="mint-file-note">' + (createState.imageInfo ? esc(createState.imageInfo) : "An uploaded file is shrunk and compressed in your browser, then embedded in the token metadata — Loop stores the whole metadata on-chain and one block fits only about 8,000,000 gas, so the embedded image has to stay tiny. For full-resolution artwork, pin the image to IPFS yourself (e.g. Pinata) and paste its ipfs:// URI or CID instead — that always fits.") + '</div></div>' +
+        '<div class="field"><label for="mint-name">Name</label><input class="input" id="mint-name" maxlength="80" placeholder="e.g. Sakura Dawn #13" value="' + esc(createState.name) + '" /></div>' +
+        '<div class="field"><label for="mint-desc">Description</label><textarea class="input" id="mint-desc" maxlength="600" placeholder="Tell collectors about this piece">' + esc(createState.desc) + '</textarea></div>' +
         '<div class="field"><label>Traits</label><div id="trait-rows">' + traitsHtml + '</div><button class="text-btn" id="trait-add">+ Add a trait</button></div>' +
-        '<div class="field"><label for="mint-list-price">List after minting (optional)</label><input class="input" id="mint-list-price" inputmode="decimal" placeholder="Price in LOOP — leave empty to just mint" />' +
+        '<div class="field"><label for="mint-list-price">List after minting (optional)</label><input class="input" id="mint-list-price" inputmode="decimal" placeholder="Price in LOOP — leave empty to just mint" value="' + esc(createState.listPrice) + '" />' +
         '<div class="f-hint">If you set a price, you will be asked to approve the marketplace and sign the listing right after the mint confirms.</div></div>' +
         '<label class="radio-card' + (createState.mode === "build" ? " sel" : "") + '"><input type="radio" name="mint-mode" value="build" ' + (createState.mode === "build" ? "checked" : "") + ' /><span><strong>Build my metadata</strong><span class="small dim" style="display:block">The page builds the standard ERC-721 JSON from the fields above and stores it as an on-chain data URI.</span></span></label>' +
         '<label class="radio-card' + (createState.mode === "ipfs" ? " sel" : "") + '"><input type="radio" name="mint-mode" value="ipfs" ' + (createState.mode === "ipfs" ? "checked" : "") + ' /><span style="flex:1"><strong>Use my own IPFS metadata</strong><span class="small dim" style="display:block">Pin your metadata JSON with a service like Pinata, then paste its URI.</span>' +
-        '<input class="input" id="mint-ipfs-uri" placeholder="ipfs://bafkrei…" style="margin-top:9px" aria-label="Your IPFS metadata URI" /></span></label>' +
+        '<input class="input" id="mint-ipfs-uri" placeholder="ipfs://bafkrei…" style="margin-top:9px" aria-label="Your IPFS metadata URI" value="' + esc(createState.ipfsUri) + '" /></span></label>' +
         '<button class="btn btn-primary btn-block" id="mint-go" style="margin-top:8px"' + (W.busy ? " disabled" : "") + ">" + (W.address ? "Mint NFT" : "Connect wallet &amp; mint") + "</button>" +
+        '<div id="mint-status" role="status" aria-live="polite"></div>' +
         '<p class="small dim" style="margin-top:10px">Minting goes to your own wallet address. Gas is paid in LOOP to the network; Loop Market charges nothing to mint.</p></div>' +
         '<div class="panel"><h3>Preview</h3><div id="mint-preview"><div class="token-media" style="aspect-ratio:1/1"><span class="thumb-ph">' + LOOP_MARK_SVG + '</span></div>' +
-        '<div style="font-weight:800;font-size:17px;margin-top:14px" id="pv-name">Untitled</div>' +
-        '<div class="small dim" id="pv-desc">Your description will appear here.</div>' +
+        '<div style="font-weight:800;font-size:17px;margin-top:14px" id="pv-name">' + esc(createState.name || "Untitled") + '</div>' +
+        '<div class="small dim" id="pv-desc">' + esc(createState.desc || "Your description will appear here.") + '</div>' +
         '<div class="kv" style="margin-top:10px"><span class="k">Collection</span><span class="v">' + (S.contracts ? esc(S.contracts.nftName) : "Loop Market NFT") + '</span></div>' +
         '<div class="kv"><span class="k">Royalty</span><span class="v">5% to you (minter)</span></div>' +
         '<div class="kv"><span class="k">Network</span><span class="v">Loop Mainnet · 15551</span></div></div></div>' +
@@ -2172,6 +2175,7 @@
       function updatePreview() {
         var name = document.getElementById("mint-name").value.trim();
         var desc = document.getElementById("mint-desc").value.trim();
+        createState.name = name; createState.desc = desc;
         document.getElementById("pv-name").textContent = name || "Untitled";
         document.getElementById("pv-desc").textContent = desc || "Your description will appear here.";
         var src = createState.imageDataUrl || urlInput.value.trim();
@@ -2186,27 +2190,42 @@
       fileInput.addEventListener("change", function () {
         var f = fileInput.files && fileInput.files[0];
         if (!f) return;
-        var reader = new FileReader();
-        reader.onload = function () {
-          createState.imageDataUrl = String(reader.result || "");
+        var note = document.getElementById("mint-file-note");
+        note.textContent = "Processing " + f.name + " — shrinking it so the mint fits in one Loop block…";
+        processArtworkFile(f).then(function (res) {
+          createState.imageDataUrl = res.dataUrl;
           createState.imageName = f.name;
+          createState.imageUrl = "";
           urlInput.value = "";
-          var kb = Math.round(f.size / 1024);
-          document.getElementById("mint-file-note").textContent = "Selected " + f.name + " (" + kb + " KB) — it will be embedded in the token metadata." + (kb > 150 ? " That is large for an on-chain data URI: expect noticeably higher mint gas. Pinning to IPFS and pasting the CID is cheaper." : "");
+          var origKb = Math.max(1, Math.round(f.size / 1024));
+          var newKb = Math.max(1, Math.round(res.dataUrl.length * 0.75 / 1024));
+          createState.imageInfo = "Selected " + f.name + " (" + origKb + " KB) — compressed to about " + newKb + " KB" + (res.w && res.h ? " at " + res.w + "×" + res.h : "") + " so the mint fits on-chain. The mint cost is checked live before your wallet opens; if it still does not fit, you will be told here before signing anything.";
+          note.textContent = createState.imageInfo;
           updatePreview();
-        };
-        reader.readAsDataURL(f);
+        }).catch(function () {
+          note.textContent = "That image could not be read. Try a PNG or JPEG file, or paste an image URL / ipfs:// URI instead.";
+        });
       });
-      urlInput.addEventListener("input", function () { createState.imageDataUrl = ""; updatePreview(); });
+      urlInput.addEventListener("input", function () { createState.imageDataUrl = ""; createState.imageInfo = ""; createState.imageUrl = urlInput.value.trim(); updatePreview(); });
       document.getElementById("mint-name").addEventListener("input", updatePreview);
       document.getElementById("mint-desc").addEventListener("input", updatePreview);
+      document.getElementById("mint-list-price").addEventListener("input", function (e) { createState.listPrice = e.target.value; });
+      var ipfsInput = document.getElementById("mint-ipfs-uri");
+      if (ipfsInput) ipfsInput.addEventListener("input", function (e) { createState.ipfsUri = e.target.value; });
+      document.getElementById("trait-rows").addEventListener("input", function () {
+        createState.traits = Array.prototype.map.call(document.querySelectorAll("#trait-rows .inline-form"), function (row) {
+          return { l: row.querySelector(".trait-label").value, v: row.querySelector(".trait-value").value };
+        });
+      });
       document.getElementById("trait-add").addEventListener("click", function () {
         var rows = document.getElementById("trait-rows");
         var div = document.createElement("div");
         div.className = "inline-form"; div.style.marginBottom = "8px";
         div.innerHTML = '<input class="input trait-label" placeholder="Trait name" aria-label="Trait name" /><input class="input trait-value" placeholder="Value" aria-label="Trait value" />';
         rows.appendChild(div);
+        createState.traits.push({ l: "", v: "" });
       });
+      updatePreview();
       app.querySelectorAll('input[name="mint-mode"]').forEach(function (r) {
         r.addEventListener("change", function () {
           createState.mode = r.value;
@@ -2218,17 +2237,98 @@
         doMint(app);
       });
     }
+    // Loop blocks fit 8,000,000 gas and storing the tokenURI string costs
+    // roughly 650 gas per character, so an embedded image must be shrunk
+    // until the whole metadata URI stays near ~7,000 characters (~4.6M gas).
+    var MINT_URI_BUDGET = 7000;
+    var BLOCK_GAS_LIMIT = 8000000;
+    function approxTokenUriLength(imageDataUrl) {
+      var overhead = 220 + (createState.name || "").length + (createState.desc || "").length + 60 * (createState.traits || []).length;
+      return Math.ceil((imageDataUrl.length + overhead) / 3) * 4 + 29;
+    }
+    function processArtworkFile(file) {
+      function readRaw() {
+        return new Promise(function (resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function () { resolve({ dataUrl: String(reader.result || ""), w: 0, h: 0 }); };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+      // GIFs keep their animation only as raw data; the preflight gas check
+      // in doMint decides whether the result can actually be minted.
+      if (!file.type || file.type === "image/gif") return readRaw();
+      return new Promise(function (resolve) {
+        var url = URL.createObjectURL(file);
+        var img = new Image();
+        img.onload = function () {
+          URL.revokeObjectURL(url);
+          try {
+            var maxDim = 640, quality = 0.82, dataUrl = "", w = 0, h = 0;
+            for (var step = 0; step < 16; step++) {
+              var scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+              w = Math.max(1, Math.round(img.naturalWidth * scale));
+              h = Math.max(1, Math.round(img.naturalHeight * scale));
+              var canvas = document.createElement("canvas");
+              canvas.width = w; canvas.height = h;
+              var ctx = canvas.getContext("2d");
+              ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h);
+              ctx.drawImage(img, 0, 0, w, h);
+              dataUrl = canvas.toDataURL("image/jpeg", quality);
+              if (approxTokenUriLength(dataUrl) <= MINT_URI_BUDGET) break;
+              if (quality > 0.42) quality = Math.max(0.42, quality - 0.13);
+              else { maxDim = Math.round(maxDim * 0.72); quality = 0.62; }
+              if (maxDim < 80) break;
+            }
+            resolve({ dataUrl: dataUrl, w: w, h: h });
+          } catch (e) { readRaw().then(resolve); }
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); readRaw().then(resolve); };
+        img.src = url;
+      });
+    }
+    function setMintStatus(kind, html) {
+      var box = document.getElementById("mint-status");
+      if (!box) return;
+      if (!html) { box.innerHTML = ""; return; }
+      var colors = kind === "err"
+        ? "border:1px solid rgba(235,87,87,.55);background:rgba(235,87,87,.10);color:var(--text)"
+        : kind === "ok"
+          ? "border:1px solid rgba(52,199,123,.5);background:rgba(52,199,123,.10);color:var(--text)"
+          : "border:1px solid var(--line);background:var(--panel2);color:var(--text)";
+      box.innerHTML = '<div style="margin-top:12px;padding:12px 14px;border-radius:12px;font-size:13.5px;line-height:1.5;' + colors + '">' + html + "</div>";
+    }
+    function estimateMintGas(uri) {
+      var tx = { from: W.address, to: NFT_CONTRACT, data: encodeMint(W.address, uri) };
+      return Promise.all([
+        rpcFetch({ jsonrpc: "2.0", method: "eth_estimateGas", params: [tx], id: 1 }).catch(function () { return null; }),
+        rpcFetch({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 2 }).catch(function () { return null; })
+      ]).then(function (both) {
+        var estRes = both[0], priceRes = both[1];
+        if (!estRes || estRes.error || typeof estRes.result !== "string") {
+          return { ok: false, error: estRes && estRes.error && estRes.error.message ? String(estRes.error.message) : "The network could not estimate this mint." };
+        }
+        var gas = Number(BigInt(estRes.result));
+        var gasPrice = priceRes && typeof priceRes.result === "string" ? BigInt(priceRes.result) : 0n;
+        var costLoop = gasPrice > 0n ? weiToLoop(BigInt(gas) * gasPrice) : null;
+        return { ok: true, gas: gas, costLoop: costLoop };
+      });
+    }
+    function mintTooBigMessage() {
+      return "<b>This NFT is too large to mint on-chain.</b><br/>Loop stores the full metadata in the transaction and one block fits only 8,000,000 gas — this mint needs more than that, so every wallet will refuse it. The image was already shrunk automatically. Two ways forward: pick a smaller or simpler image, or switch to <b>“Use my own IPFS metadata”</b> above, pin the metadata JSON (e.g. with Pinata) and paste its ipfs:// URI — that always fits.";
+    }
     function doMint(app) {
       var uri;
+      setMintStatus("", "");
       if (createState.mode === "ipfs") {
         uri = document.getElementById("mint-ipfs-uri").value.trim();
-        if (uri.indexOf("ipfs://") !== 0) { toast("err", "Paste your IPFS metadata URI", "It should start with ipfs:// — pin the metadata JSON first, then paste its URI."); return; }
+        if (uri.indexOf("ipfs://") !== 0) { setMintStatus("err", "<b>Paste your IPFS metadata URI</b> — it should start with ipfs://. Pin the metadata JSON first, then paste its URI."); toast("err", "Paste your IPFS metadata URI", "It should start with ipfs:// — pin the metadata JSON first, then paste its URI."); return; }
       } else {
         var name = document.getElementById("mint-name").value.trim();
         var desc = document.getElementById("mint-desc").value.trim();
         var image = createState.imageDataUrl || document.getElementById("mint-image-url").value.trim();
-        if (!name) { toast("err", "Give your NFT a name", "The name is part of the on-chain metadata and cannot be changed later."); return; }
-        if (!image) { toast("err", "Add an image", "Upload an image file or paste an image URL / ipfs:// URI / CID."); return; }
+        if (!name) { setMintStatus("err", "<b>Give your NFT a name</b> — the name is part of the on-chain metadata and cannot be changed later."); toast("err", "Give your NFT a name", "The name is part of the on-chain metadata and cannot be changed later."); return; }
+        if (!image) { setMintStatus("err", "<b>Add an image</b> — upload an image file or paste an image URL / ipfs:// URI / CID."); toast("err", "Add an image", "Upload an image file or paste an image URL / ipfs:// URI / CID."); return; }
         if (/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[a-z0-9]{20,})$/.test(image)) image = "ipfs://" + image;
         var traits = [];
         app.querySelectorAll("#trait-rows .inline-form").forEach(function (row) {
@@ -2241,8 +2341,27 @@
         uri = toDataUri(meta);
       }
       var listPrice = document.getElementById("mint-list-price").value.trim();
-      sendTx("Mint NFT", NFT_CONTRACT, encodeMint(W.address, uri), 0n).then(function (receipt) {
-        if (!receipt) return;
+      W.lastTxError = "";
+      setMintStatus("info", "Checking the mint cost on the live contract before opening your wallet…");
+      estimateMintGas(uri).then(function (est) {
+        if (!est.ok) {
+          var tooBig = /exceeds allowance|gas required exceeds|intrinsic gas too high/i.test(est.error || "");
+          setMintStatus("err", tooBig ? mintTooBigMessage() : "<b>The mint cannot be sent.</b><br/>The network refused to estimate it: " + esc(est.error || "unknown error"));
+          toast("err", "Mint cannot be sent", tooBig ? "The metadata is too large for one Loop block — see the note under the Mint button." : esc(est.error || ""));
+          return;
+        }
+        if (est.gas > BLOCK_GAS_LIMIT * 0.94) {
+          setMintStatus("err", mintTooBigMessage());
+          toast("err", "Mint too large", "This mint needs about " + est.gas.toLocaleString("en-US") + " gas — more than one Loop block fits.");
+          return;
+        }
+        var gasToSend = Math.min(Math.floor(est.gas * 1.2), BLOCK_GAS_LIMIT - 1000);
+        setMintStatus("info", "Estimated gas: <b>" + est.gas.toLocaleString("en-US") + "</b>" + (est.costLoop !== null ? " (about <b>" + fmt(est.costLoop) + " LOOP</b> in network fees)" : "") + ". Your wallet will now ask you to confirm the mint — if no wallet popup appears, open your wallet app and check for a pending request.");
+        return sendTx("Mint NFT", NFT_CONTRACT, encodeMint(W.address, uri), 0n, { gas: gasToSend }).then(function (receipt) {
+        if (!receipt) {
+          setMintStatus("err", "<b>The mint was not completed.</b>" + (W.lastTxError ? "<br/>" + esc(W.lastTxError) : "<br/>No transaction was confirmed. If your wallet showed a gas error, the image is still too large — see the IPFS option above.") + "<br/>Nothing was charged for a transaction that was never sent; a rejected signature costs no gas.");
+          return;
+        }
         // The new token ID is in the Minted event of the receipt.
         var newId = null;
         (receipt.logs || []).forEach(function (log) {
@@ -2256,6 +2375,7 @@
         loadMarketplace().then(function () {
           rerender();
           if (newId !== null) {
+            setMintStatus("ok", '<b>NFT minted.</b> Your token is LMNFT #' + newId + '. <a href="#/token/' + newId + '">Open it</a>');
             toast("ok", "NFT minted", 'Your token is LMNFT #' + newId + '. <a href="#/token/' + newId + '">Open it</a>');
             if (listPrice) {
               var wei = parseLoopToWei(listPrice);
@@ -2270,6 +2390,7 @@
               location.hash = "#/token/" + newId;
             }
           }
+        });
         });
       });
     }

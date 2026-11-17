@@ -556,10 +556,10 @@
     var DEPLOY_FROM_BLOCK = 45270000;
     var ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
     var IPFS_GATEWAYS = [
-      "https://gateway.pinata.cloud/ipfs/",
-      "https://ipfs.filebase.io/ipfs/",
       "https://ipfs.io/ipfs/",
-      "https://dweb.link/ipfs/"
+      "https://dweb.link/ipfs/",
+      "https://ipfs.filebase.io/ipfs/",
+      "https://gateway.pinata.cloud/ipfs/"
     ];
 
     // Function selectors of the deployed contracts (verified on-chain).
@@ -756,14 +756,23 @@
         .then(function (r) { clearTimeout(timer); if (!r.ok) throw new Error("HTTP " + r.status); return r; })
         .catch(function (e) { clearTimeout(timer); throw e; });
     }
+    // Race every gateway in parallel and take the first JSON that
+    // arrives — waiting on gateways one by one (7s timeout each) was
+    // the single biggest cause of slow first paint.
     function fetchJsonFromGateways(cid, path) {
-      var chain = Promise.reject(new Error("start"));
-      IPFS_GATEWAYS.forEach(function (gw) {
-        chain = chain.catch(function () {
-          return fetchWithTimeout(gw + cid + path, 7000).then(function (r) { return r.json(); });
+      return new Promise(function (resolve) {
+        var done = false, pending = IPFS_GATEWAYS.length;
+        IPFS_GATEWAYS.forEach(function (gw) {
+          fetchWithTimeout(gw + cid + path, 6000).then(function (r) { return r.json(); })
+            .then(function (json) {
+              if (!done) { done = true; resolve(json); }
+            })
+            .catch(function () {
+              pending -= 1;
+              if (!done && pending <= 0) resolve(null);
+            });
         });
       });
-      return chain.catch(function () { return null; });
     }
     var UNRESOLVED_META = { status: "unresolved", name: null, description: null, imageUrl: null, imageFallbackUrl: null, externalUrl: null, traits: [] };
     function metadataFromJson(json) {
@@ -845,17 +854,44 @@
       loaded: false, loading: false, online: false, blockNumber: 0, checkedAt: null,
       contracts: null, tokens: [], tokenById: new Map(), events: [], salesAll: [],
       holders: [], totals: { minted: 0, activeListings: 0, floorLoop: null, owners: 0, salesCount: 0, volumeLoop: 0, activeOffers: 0 },
-      rarity: new Map(), metaCache: new Map(), loadError: null
+      rarity: new Map(), metaCache: new Map(), loadError: null, metaGen: 0
     };
     var W = { address: null, balanceLoop: null, busy: false, busyLabel: "", lastTxError: "" };
 
+    function buildTokens(states) {
+      return states.map(function (st) {
+        var meta = S.metaCache.get(st.tokenURI) || UNRESOLVED_META;
+        return Object.assign({}, st, {
+          metadataStatus: meta.status, name: meta.name, description: meta.description,
+          imageUrl: meta.imageUrl, imageFallbackUrl: meta.imageFallbackUrl,
+          imageRaw: meta.imageRaw || null, externalUrl: meta.externalUrl, traits: meta.traits
+        });
+      });
+    }
+    // Metadata (names, artwork, traits) resolves off the critical path:
+    // the page paints from live on-chain state first, then names and
+    // artwork fill in as soon as the IPFS/HTTP fetches land.
+    function fillMetadataInBackground(states, gen) {
+      var missing = states.filter(function (st) { return !S.metaCache.has(st.tokenURI); });
+      if (!missing.length) return;
+      var jobs = missing.map(function (st) {
+        return fetchTokenMetadata(st.tokenURI).then(function (m) { S.metaCache.set(st.tokenURI, m); });
+      });
+      Promise.all(jobs).then(function () {
+        if (gen !== S.metaGen || !S.loaded) return;
+        S.tokens = buildTokens(states);
+        S.tokenById = new Map(S.tokens.map(function (t) { return [t.tokenId, t]; }));
+        finishDerived(S.checkedAt);
+        if (currentRoute().name !== "create") rerender();
+      });
+    }
     function loadMarketplace() {
       if (S.loading) return Promise.resolve();
       S.loading = true;
       var checkedAt = new Date().toISOString();
-      return Promise.all([
-        rpcSingle("eth_chainId", []),
-        rpcSingle("eth_blockNumber", [])
+      return rpcBatch([
+        { method: "eth_chainId", params: [] },
+        { method: "eth_blockNumber", params: [] }
       ]).then(function (head) {
         var chainHex = head[0], blockHex = head[1];
         if (!chainHex || !blockHex) {
@@ -865,88 +901,88 @@
         }
         S.online = true; S.loadError = null;
         S.blockNumber = parseInt(blockHex, 16);
+        // Events do not depend on token state, so fetch them in parallel
+        // with the contract/token reads instead of after them.
+        var eventsP = loadEvents();
         var infoSpecs = [
           ethCall(NFT_CONTRACT, SEL.name), ethCall(NFT_CONTRACT, SEL.symbol), ethCall(NFT_CONTRACT, SEL.owner),
-          { method: "eth_getCode", params: [NFT_CONTRACT, "latest"] },
           ethCall(MARKETPLACE_CONTRACT, SEL.nftGetter), ethCall(MARKETPLACE_CONTRACT, SEL.feeRecipient),
-          ethCall(MARKETPLACE_CONTRACT, SEL.feeBps), ethCall(MARKETPLACE_CONTRACT, SEL.owner),
-          { method: "eth_getCode", params: [MARKETPLACE_CONTRACT, "latest"] }
+          ethCall(MARKETPLACE_CONTRACT, SEL.feeBps), ethCall(MARKETPLACE_CONTRACT, SEL.owner)
         ];
-        return rpcBatch(infoSpecs).then(function (info) {
+        // Supply discovery: token IDs are sequential from 1 with no burn
+        // function, so probe ownerOf() in chunks until the first gap.
+        return Promise.all([rpcBatch(infoSpecs), probeSupply(1, [])]).then(function (both) {
+          var info = both[0];
           var asHex = function (v) { return typeof v === "string" ? v : null; };
           var words = function (v) { return typeof v === "string" ? hexWords(v) : []; };
-          var nftCode = asHex(info[3]) || "0x";
-          var mktCode = asHex(info[8]) || "0x";
-          var feeBps = Number(wordToBigInt(words(info[6])[0]));
+          var feeBps = Number(wordToBigInt(words(info[5])[0]));
           S.contracts = {
             nftName: decodeStringResult(asHex(info[0])) || "Loop Market NFT",
             nftSymbol: decodeStringResult(asHex(info[1])) || "LMNFT",
             nftOwner: wordToAddress(words(info[2])[0]),
-            nftCodeBytes: Math.max(0, (nftCode.length - 2) / 2),
-            linkedNft: wordToAddress(words(info[4])[0]),
-            feeRecipient: wordToAddress(words(info[5])[0]),
+            nftCodeBytes: null,
+            linkedNft: wordToAddress(words(info[3])[0]),
+            feeRecipient: wordToAddress(words(info[4])[0]),
             feeBps: feeBps || 250,
             feePercent: (feeBps || 250) / 100,
-            marketplaceOwner: wordToAddress(words(info[7])[0]),
-            marketplaceCodeBytes: Math.max(0, (mktCode.length - 2) / 2)
+            marketplaceOwner: wordToAddress(words(info[6])[0]),
+            marketplaceCodeBytes: null
           };
           S.contracts.linked = S.contracts.linkedNft.toLowerCase() === NFT_CONTRACT.toLowerCase();
-          // Supply discovery: token IDs are sequential from 1 with no burn
-          // function, so probe ownerOf() in chunks until the first gap.
-          return probeSupply(1, []).then(function (found) {
-            var existingIds = found.ids, ownerById = found.owners;
-            var oneLoopWei = padUint(10n ** 18n);
-            var specs = [];
-            existingIds.forEach(function (id) {
-              specs.push(ethCall(NFT_CONTRACT, SEL.tokenURI + padUint(id)));
-              specs.push(ethCall(MARKETPLACE_CONTRACT, SEL.listings + padUint(id)));
-              specs.push(ethCall(MARKETPLACE_CONTRACT, SEL.offers + padUint(id)));
-              specs.push(ethCall(NFT_CONTRACT, SEL.royaltyInfo + padUint(id) + oneLoopWei));
+          // Contract bytecode size is only shown on the Documents page —
+          // fetch it off the critical path so it never delays first paint.
+          rpcBatch([
+            { method: "eth_getCode", params: [NFT_CONTRACT, "latest"] },
+            { method: "eth_getCode", params: [MARKETPLACE_CONTRACT, "latest"] }
+          ]).then(function (codeRes) {
+            if (!S.contracts) return;
+            var nc = asHex(codeRes[0]) || "0x";
+            var mc = asHex(codeRes[1]) || "0x";
+            S.contracts.nftCodeBytes = Math.max(0, (nc.length - 2) / 2);
+            S.contracts.marketplaceCodeBytes = Math.max(0, (mc.length - 2) / 2);
+            if (currentRoute().name === "documents") rerender();
+          });
+          var found = both[1];
+          var existingIds = found.ids, ownerById = found.owners;
+          var oneLoopWei = padUint(10n ** 18n);
+          var specs = [];
+          existingIds.forEach(function (id) {
+            specs.push(ethCall(NFT_CONTRACT, SEL.tokenURI + padUint(id)));
+            specs.push(ethCall(MARKETPLACE_CONTRACT, SEL.listings + padUint(id)));
+            specs.push(ethCall(MARKETPLACE_CONTRACT, SEL.offers + padUint(id)));
+            specs.push(ethCall(NFT_CONTRACT, SEL.royaltyInfo + padUint(id) + oneLoopWei));
+          });
+          return rpcBatch(specs).then(function (res) {
+            var states = existingIds.map(function (id, idx) {
+              var base = idx * 4;
+              var lw = typeof res[base + 1] === "string" ? hexWords(res[base + 1]) : [];
+              var ow = typeof res[base + 2] === "string" ? hexWords(res[base + 2]) : [];
+              var rw = typeof res[base + 3] === "string" ? hexWords(res[base + 3]) : [];
+              var lSeller = wordToAddress(lw[0]);
+              var lActive = wordToBigInt(lw[2]) === 1n;
+              var oOfferer = wordToAddress(ow[0]);
+              var oActive = wordToBigInt(ow[2]) === 1n;
+              var royaltyAmount = wordToBigInt(rw[1]);
+              return {
+                tokenId: id,
+                owner: ownerById.get(id) || ZERO_ADDRESS,
+                tokenURI: decodeStringResult(asHex(res[base])) || "",
+                listing: (lSeller !== ZERO_ADDRESS || lActive) ? { seller: lSeller, priceLoop: weiToLoop(wordToBigInt(lw[1])), priceWei: wordToBigInt(lw[1]), active: lActive } : null,
+                offer: (oOfferer !== ZERO_ADDRESS || oActive) ? { offerer: oOfferer, amountLoop: weiToLoop(wordToBigInt(ow[1])), amountWei: wordToBigInt(ow[1]), active: oActive } : null,
+                royaltyReceiver: wordToAddress(rw[0]),
+                royaltyPercent: Math.round((Number(royaltyAmount) / 1e18) * 100 * 100) / 100
+              };
             });
-            return rpcBatch(specs).then(function (res) {
-              var states = existingIds.map(function (id, idx) {
-                var base = idx * 4;
-                var lw = typeof res[base + 1] === "string" ? hexWords(res[base + 1]) : [];
-                var ow = typeof res[base + 2] === "string" ? hexWords(res[base + 2]) : [];
-                var rw = typeof res[base + 3] === "string" ? hexWords(res[base + 3]) : [];
-                var lSeller = wordToAddress(lw[0]);
-                var lActive = wordToBigInt(lw[2]) === 1n;
-                var oOfferer = wordToAddress(ow[0]);
-                var oActive = wordToBigInt(ow[2]) === 1n;
-                var royaltyAmount = wordToBigInt(rw[1]);
-                return {
-                  tokenId: id,
-                  owner: ownerById.get(id) || ZERO_ADDRESS,
-                  tokenURI: decodeStringResult(asHex(res[base])) || "",
-                  listing: (lSeller !== ZERO_ADDRESS || lActive) ? { seller: lSeller, priceLoop: weiToLoop(wordToBigInt(lw[1])), priceWei: wordToBigInt(lw[1]), active: lActive } : null,
-                  offer: (oOfferer !== ZERO_ADDRESS || oActive) ? { offerer: oOfferer, amountLoop: weiToLoop(wordToBigInt(ow[1])), amountWei: wordToBigInt(ow[1]), active: oActive } : null,
-                  royaltyReceiver: wordToAddress(rw[0]),
-                  royaltyPercent: Math.round((Number(royaltyAmount) / 1e18) * 100 * 100) / 100
-                };
-              });
-              return loadEvents().then(function (ev) {
-                // Metadata, cached by URI so silent refreshes stay cheap.
-                var metaJobs = states.map(function (st) {
-                  if (S.metaCache.has(st.tokenURI)) return Promise.resolve(S.metaCache.get(st.tokenURI));
-                  return fetchTokenMetadata(st.tokenURI).then(function (m) { S.metaCache.set(st.tokenURI, m); return m; });
-                });
-                return Promise.all(metaJobs).then(function (metas) {
-                  S.tokens = states.map(function (st, i) {
-                    var meta = metas[i] || UNRESOLVED_META;
-                    var imageRaw = null;
-                    // Recover the raw image reference for gateway cycling.
-                    return Object.assign({}, st, {
-                      metadataStatus: meta.status, name: meta.name, description: meta.description,
-                      imageUrl: meta.imageUrl, imageFallbackUrl: meta.imageFallbackUrl,
-                      imageRaw: meta.imageRaw || null, externalUrl: meta.externalUrl, traits: meta.traits
-                    });
-                  });
-                  S.tokenById = new Map(S.tokens.map(function (t) { return [t.tokenId, t]; }));
-                  S.events = ev.events;
-                  S.salesAll = ev.salesAll;
-                  finishDerived(checkedAt);
-                });
-              });
+            return eventsP.then(function (ev) {
+              S.events = ev.events;
+              S.salesAll = ev.salesAll;
+              // First paint from on-chain state alone (metadata already
+              // cached is applied immediately; the rest fills in behind).
+              var gen = ++S.metaGen;
+              S.tokens = buildTokens(states);
+              S.tokenById = new Map(S.tokens.map(function (t) { return [t.tokenId, t]; }));
+              finishDerived(checkedAt);
+              fillMetadataInBackground(states, gen);
             });
           });
         });
@@ -975,82 +1011,99 @@
         return { ids: acc.map(function (e) { return e.id; }), owners: owners };
       });
     }
+    // Log + block-timestamp cache: the first load scans the full history
+    // once; later loads only re-read the newest block and merge, so the
+    // 20s/30s background refreshes stay cheap instead of rescanning
+    // from the deploy block every time.
+    var logCache = { logs: [], lastBlock: 0, tsByBlock: new Map() };
     function loadEvents() {
-      var fromBlockHex = "0x" + DEPLOY_FROM_BLOCK.toString(16);
-      return Promise.all([
-        rpcSingle("eth_getLogs", [{ address: NFT_CONTRACT, fromBlock: fromBlockHex, toBlock: "latest" }]),
-        rpcSingle("eth_getLogs", [{ address: MARKETPLACE_CONTRACT, fromBlock: fromBlockHex, toBlock: "latest" }])
-      ]).then(function (both) {
-        var allLogs = (both[0] || []).concat(both[1] || []);
-        var topicSet = {};
-        Object.keys(TOPIC).forEach(function (k) { topicSet[TOPIC[k]] = true; });
-        var relevant = allLogs.filter(function (l) { return topicSet[(l.topics[0] || "").toLowerCase()]; });
-        var blockNumbers = [];
-        var seen = {};
-        relevant.forEach(function (l) {
-          var b = parseInt(l.blockNumber, 16);
-          if (!seen[b]) { seen[b] = true; blockNumbers.push(b); }
-        });
-        var blockSpecs = blockNumbers.map(function (b) {
-          return { method: "eth_getBlockByNumber", params: ["0x" + b.toString(16), false] };
-        });
-        return rpcBatch(blockSpecs).then(function (blockResults) {
-          var tsByBlock = new Map();
-          blockNumbers.forEach(function (b, i) {
-            var blk = blockResults[i];
-            if (blk && typeof blk.timestamp === "string") tsByBlock.set(b, new Date(parseInt(blk.timestamp, 16) * 1000).toISOString());
+      return rpcSingle("eth_blockNumber", []).then(function (headHex) {
+        var head = headHex ? parseInt(headHex, 16) : 0;
+        var fromBlock = logCache.lastBlock > 0 ? logCache.lastBlock : DEPLOY_FROM_BLOCK;
+        var fromBlockHex = "0x" + fromBlock.toString(16);
+        return Promise.all([
+          rpcSingle("eth_getLogs", [{ address: NFT_CONTRACT, fromBlock: fromBlockHex, toBlock: "latest" }]),
+          rpcSingle("eth_getLogs", [{ address: MARKETPLACE_CONTRACT, fromBlock: fromBlockHex, toBlock: "latest" }])
+        ]).then(function (both) {
+          var seen = {};
+          logCache.logs.forEach(function (l) { seen[l.transactionHash + ":" + l.logIndex] = true; });
+          (both[0] || []).concat(both[1] || []).forEach(function (l) {
+            var k = l.transactionHash + ":" + l.logIndex;
+            if (!seen[k]) { seen[k] = true; logCache.logs.push(l); }
           });
-          var saleTx = {}, acceptedTx = {};
+          if (head > logCache.lastBlock) logCache.lastBlock = head;
+          var allLogs = logCache.logs;
+          var topicSet = {};
+          Object.keys(TOPIC).forEach(function (k) { topicSet[TOPIC[k]] = true; });
+          var relevant = allLogs.filter(function (l) { return topicSet[(l.topics[0] || "").toLowerCase()]; });
+          var blockNumbers = [];
+          var seenB = {};
           relevant.forEach(function (l) {
-            var t0 = (l.topics[0] || "").toLowerCase();
-            if (t0 === TOPIC.sale) saleTx[l.transactionHash.toLowerCase()] = true;
-            if (t0 === TOPIC.offerAccepted) acceptedTx[l.transactionHash.toLowerCase()] = true;
+            var b = parseInt(l.blockNumber, 16);
+            if (!seenB[b]) { seenB[b] = true; blockNumbers.push(b); }
           });
-          var events = [], salesAll = [];
-          var salesCount = 0, volumeWei = 0n;
-          relevant.forEach(function (log) {
-            var t0 = (log.topics[0] || "").toLowerCase();
-            var blockNumber = parseInt(log.blockNumber, 16);
-            var base = {
-              txHash: log.transactionHash, blockNumber: blockNumber,
-              logIndex: parseInt(log.logIndex, 16),
-              timestamp: tsByBlock.get(blockNumber) || null,
-              explorerUrl: EXPLORER_URL + "/tx/" + log.transactionHash
-            };
-            var dw = hexWords(log.data || "0x");
-            if (t0 === TOPIC.minted) {
-              events.push(Object.assign({}, base, { kind: "mint", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: topicToAddress(log.topics[3]), priceLoop: null, feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
-            } else if (t0 === TOPIC.transfer) {
-              var from = topicToAddress(log.topics[1]), to = topicToAddress(log.topics[2]);
-              if (from === ZERO_ADDRESS) return;
-              if (saleTx[log.transactionHash.toLowerCase()]) return;
-              events.push(Object.assign({}, base, { kind: "transfer", tokenId: topicToUint(log.topics[3]), from: from, to: to, priceLoop: null, feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
-            } else if (t0 === TOPIC.listed) {
-              events.push(Object.assign({}, base, { kind: "listed", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
-            } else if (t0 === TOPIC.listingCancelled) {
-              events.push(Object.assign({}, base, { kind: "listing-cancelled", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: null, feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
-            } else if (t0 === TOPIC.sale) {
-              var price = wordToBigInt(dw[0]);
-              salesCount += 1; volumeWei += price;
-              var saleRec = {
-                tokenId: topicToUint(log.topics[1]), seller: topicToAddress(log.topics[2]), buyer: topicToAddress(log.topics[3]),
-                priceLoop: weiToLoop(price), priceWei: price, timestamp: base.timestamp, txHash: log.transactionHash,
-                blockNumber: blockNumber, viaOffer: !!acceptedTx[log.transactionHash.toLowerCase()]
+          var missingBlocks = blockNumbers.filter(function (b) { return !logCache.tsByBlock.has(b); });
+          var blockSpecs = missingBlocks.map(function (b) {
+            return { method: "eth_getBlockByNumber", params: ["0x" + b.toString(16), false] };
+          });
+          return rpcBatch(blockSpecs).then(function (blockResults) {
+            missingBlocks.forEach(function (b, i) {
+              var blk = blockResults[i];
+              if (blk && typeof blk.timestamp === "string") logCache.tsByBlock.set(b, new Date(parseInt(blk.timestamp, 16) * 1000).toISOString());
+            });
+            var tsByBlock = logCache.tsByBlock;
+            var saleTx = {}, acceptedTx = {};
+            relevant.forEach(function (l) {
+              var t0 = (l.topics[0] || "").toLowerCase();
+              if (t0 === TOPIC.sale) saleTx[l.transactionHash.toLowerCase()] = true;
+              if (t0 === TOPIC.offerAccepted) acceptedTx[l.transactionHash.toLowerCase()] = true;
+            });
+            var events = [], salesAll = [];
+            var salesCount = 0, volumeWei = 0n;
+            relevant.forEach(function (log) {
+              var t0 = (log.topics[0] || "").toLowerCase();
+              var blockNumber = parseInt(log.blockNumber, 16);
+              var base = {
+                txHash: log.transactionHash, blockNumber: blockNumber,
+                logIndex: parseInt(log.logIndex, 16),
+                timestamp: tsByBlock.get(blockNumber) || null,
+                explorerUrl: EXPLORER_URL + "/tx/" + log.transactionHash
               };
-              salesAll.push(saleRec);
-              if (acceptedTx[log.transactionHash.toLowerCase()]) return;
-              events.push(Object.assign({}, base, { kind: "sale", tokenId: saleRec.tokenId, from: saleRec.seller, to: saleRec.buyer, priceLoop: saleRec.priceLoop, feeLoop: weiToLoop(wordToBigInt(dw[1])), royaltyLoop: weiToLoop(wordToBigInt(dw[2])), royaltyReceiver: wordToAddress(dw[3]) }));
-            } else if (t0 === TOPIC.offerMade) {
-              events.push(Object.assign({}, base, { kind: "offer-made", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
-            } else if (t0 === TOPIC.offerWithdrawn) {
-              events.push(Object.assign({}, base, { kind: "offer-withdrawn", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
-            } else if (t0 === TOPIC.offerAccepted) {
-              events.push(Object.assign({}, base, { kind: "offer-accepted", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: topicToAddress(log.topics[3]), priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
-            }
+              var dw = hexWords(log.data || "0x");
+              if (t0 === TOPIC.minted) {
+                events.push(Object.assign({}, base, { kind: "mint", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: topicToAddress(log.topics[3]), priceLoop: null, feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+              } else if (t0 === TOPIC.transfer) {
+                var from = topicToAddress(log.topics[1]), to = topicToAddress(log.topics[2]);
+                if (from === ZERO_ADDRESS) return;
+                if (saleTx[log.transactionHash.toLowerCase()]) return;
+                events.push(Object.assign({}, base, { kind: "transfer", tokenId: topicToUint(log.topics[3]), from: from, to: to, priceLoop: null, feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+              } else if (t0 === TOPIC.listed) {
+                events.push(Object.assign({}, base, { kind: "listed", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+              } else if (t0 === TOPIC.listingCancelled) {
+                events.push(Object.assign({}, base, { kind: "listing-cancelled", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: null, feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+              } else if (t0 === TOPIC.sale) {
+                var price = wordToBigInt(dw[0]);
+                salesCount += 1; volumeWei += price;
+                var saleRec = {
+                  tokenId: topicToUint(log.topics[1]), seller: topicToAddress(log.topics[2]), buyer: topicToAddress(log.topics[3]),
+                  priceLoop: weiToLoop(price), priceWei: price, timestamp: base.timestamp, txHash: log.transactionHash,
+                  blockNumber: blockNumber, viaOffer: !!acceptedTx[log.transactionHash.toLowerCase()]
+                };
+                salesAll.push(saleRec);
+                if (acceptedTx[log.transactionHash.toLowerCase()]) return;
+                events.push(Object.assign({}, base, { kind: "sale", tokenId: saleRec.tokenId, from: saleRec.seller, to: saleRec.buyer, priceLoop: saleRec.priceLoop, feeLoop: weiToLoop(wordToBigInt(dw[1])), royaltyLoop: weiToLoop(wordToBigInt(dw[2])), royaltyReceiver: wordToAddress(dw[3]) }));
+              } else if (t0 === TOPIC.offerMade) {
+                events.push(Object.assign({}, base, { kind: "offer-made", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+              } else if (t0 === TOPIC.offerWithdrawn) {
+                events.push(Object.assign({}, base, { kind: "offer-withdrawn", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: null, priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+              } else if (t0 === TOPIC.offerAccepted) {
+                events.push(Object.assign({}, base, { kind: "offer-accepted", tokenId: topicToUint(log.topics[1]), from: topicToAddress(log.topics[2]), to: topicToAddress(log.topics[3]), priceLoop: weiToLoop(wordToBigInt(dw[0])), feeLoop: null, royaltyLoop: null, royaltyReceiver: null }));
+              }
+            });
+            events.sort(function (a, b) { return b.blockNumber - a.blockNumber || b.logIndex - a.logIndex; });
+            salesAll.sort(function (a, b) { return b.blockNumber - a.blockNumber; });
+            return { events: events.slice(0, 150), salesAll: salesAll, salesCount: salesCount, volumeWei: volumeWei };
           });
-          events.sort(function (a, b) { return b.blockNumber - a.blockNumber || b.logIndex - a.logIndex; });
-          salesAll.sort(function (a, b) { return b.blockNumber - a.blockNumber; });
-          return { events: events.slice(0, 150), salesAll: salesAll, salesCount: salesCount, volumeWei: volumeWei };
         });
       });
     }
@@ -2422,8 +2475,8 @@
         '<p>Loop Market is non-custodial: this page never holds keys, seed phrases, or funds. Every trade is a transaction you sign in your own wallet against the two contracts below.</p>' +
         '<div class="panel"><h3>Live contract verification</h3>' +
         (c ?
-          '<div class="kv"><span class="k">LoopMarketNFT code on-chain</span><span class="v">' + c.nftCodeBytes.toLocaleString("en-US") + ' bytes</span></div>' +
-          '<div class="kv"><span class="k">LoopMarketplace code on-chain</span><span class="v">' + c.marketplaceCodeBytes.toLocaleString("en-US") + ' bytes</span></div>' +
+          '<div class="kv"><span class="k">LoopMarketNFT code on-chain</span><span class="v">' + (c.nftCodeBytes === null ? "—" : c.nftCodeBytes.toLocaleString("en-US") + " bytes") + '</span></div>' +
+          '<div class="kv"><span class="k">LoopMarketplace code on-chain</span><span class="v">' + (c.marketplaceCodeBytes === null ? "—" : c.marketplaceCodeBytes.toLocaleString("en-US") + " bytes") + '</span></div>' +
           '<div class="kv"><span class="k">Marketplace linked to this NFT contract</span><span class="v">' + (c.linked ? "Yes — nft() matches" : "No — do not trade") + '</span></div>' +
           '<div class="kv"><span class="k">Marketplace fee read live</span><span class="v">' + c.feeBps + ' bps (' + fmt(c.feePercent) + '%)</span></div>' +
           '<div class="kv"><span class="k">Contract owners</span><span class="v addr">NFT ' + shortAddr(c.nftOwner) + ' · Marketplace ' + shortAddr(c.marketplaceOwner) + "</span></div>"
